@@ -1,0 +1,11 @@
+{
+  "presets": [
+    {
+      "id": "joymaas",
+      "label": "JoyMaas 内网",
+      "baseUrl": "https://joymaas-internal.123u.com",
+      "protocol": "anthropic",
+      "apiKey": "JOYMAAS_API_KEY"
+    }
+  ]
+}

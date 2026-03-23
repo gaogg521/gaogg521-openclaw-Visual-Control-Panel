@@ -1,0 +1,1430 @@
+[
+  {
+    "key": "site.title",
+    "value": "OpenClaw Bot Dashboard"
+  },
+  {
+    "key": "site.desc",
+    "value": "View all OpenClaw Expert Squad configurations"
+  },
+  {
+    "key": "nav.overview",
+    "value": "Overview"
+  },
+  {
+    "key": "nav.agents",
+    "value": "Expert Squad"
+  },
+  {
+    "key": "nav.models",
+    "value": "Models"
+  },
+  {
+    "key": "nav.monitor",
+    "value": "Monitor"
+  },
+  {
+    "key": "nav.sessions",
+    "value": "Sessions"
+  },
+  {
+    "key": "nav.stats",
+    "value": "Statistics"
+  },
+  {
+    "key": "nav.pixelOffice",
+    "value": "Expert Studio"
+  },
+  {
+    "key": "nav.config",
+    "value": "Config"
+  },
+  {
+    "key": "nav.skills",
+    "value": "Skills"
+  },
+  {
+    "key": "nav.alerts",
+    "value": "Alerts"
+  },
+  {
+    "key": "nav.experiments",
+    "value": "Experiments"
+  },
+  {
+    "key": "nav.expandSidebar",
+    "value": "Expand sidebar"
+  },
+  {
+    "key": "nav.collapseSidebar",
+    "value": "Collapse sidebar"
+  },
+  {
+    "key": "nav.bugsOn",
+    "value": "Bugs On"
+  },
+  {
+    "key": "nav.bugsOff",
+    "value": "Bugs Off"
+  },
+  {
+    "key": "nav.bugsCount",
+    "value": "Count"
+  },
+  {
+    "key": "nav.oneoneAdmin",
+    "value": "OneOne Admin"
+  },
+  {
+    "key": "nav.oneoneDashboard",
+    "value": "Dashboard"
+  },
+  {
+    "key": "nav.channels",
+    "value": "Channel Management"
+  },
+  {
+    "key": "oneone.dashboardTitle",
+    "value": "Dashboard"
+  },
+  {
+    "key": "oneone.dashboardVersion",
+    "value": "ONECLAW Version"
+  },
+  {
+    "key": "oneone.dashboardGatewayStatus",
+    "value": "Gateway Status"
+  },
+  {
+    "key": "oneone.dashboardOnline",
+    "value": "Online"
+  },
+  {
+    "key": "oneone.dashboardOffline",
+    "value": "Offline"
+  },
+  {
+    "key": "oneone.dashboardChannelsEnabled",
+    "value": "Enabled Channels"
+  },
+  {
+    "key": "oneone.dashboardModelsConfigured",
+    "value": "Configured Models"
+  },
+  {
+    "key": "oneone.dashboardSystemInfo",
+    "value": "System Info"
+  },
+  {
+    "key": "oneone.dashboardConfigPath",
+    "value": "Config File"
+  },
+  {
+    "key": "oneone.dashboardGatewayPort",
+    "value": "Gateway Port"
+  },
+  {
+    "key": "oneone.dashboardWorkspace",
+    "value": "Workspace"
+  },
+  {
+    "key": "oneone.dashboardMaxConcurrency",
+    "value": "Max Concurrency"
+  },
+  {
+    "key": "oneone.dashboardSubMaxConcurrency",
+    "value": "Sub Max Concurrency"
+  },
+  {
+    "key": "oneone.dashboardRefreshStatus",
+    "value": "Refresh Status"
+  },
+  {
+    "key": "oneone.dashboardFetchFailed",
+    "value": "Failed to fetch status"
+  },
+  {
+    "key": "oneone.channelsTitle",
+    "value": "Channel Management"
+  },
+  {
+    "key": "oneone.channelsHint",
+    "value": "After editing, click \"Save to Config\", then click \"Restart OneOneClaw\" in the top bar to apply."
+  },
+  {
+    "key": "oneone.channelsAdd",
+    "value": "Add Channel"
+  },
+  {
+    "key": "oneone.channelsSaveToConfig",
+    "value": "Save to Config"
+  },
+  {
+    "key": "oneone.channelsFetchFailed",
+    "value": "Failed to fetch channels"
+  },
+  {
+    "key": "oneone.channelsName",
+    "value": "Name"
+  },
+  {
+    "key": "oneone.channelsStatus",
+    "value": "Status"
+  },
+  {
+    "key": "oneone.channelsEnabled",
+    "value": "Enabled"
+  },
+  {
+    "key": "oneone.channelsDisabled",
+    "value": "Disabled"
+  },
+  {
+    "key": "oneone.channelsActions",
+    "value": "Actions"
+  },
+  {
+    "key": "oneone.channelsDelete",
+    "value": "Delete"
+  },
+  {
+    "key": "oneone.channelNew",
+    "value": "New Channel"
+  },
+  {
+    "key": "oneone.channelsSaveSuccess",
+    "value": "Saved to OpenClaw config. Click \"Restart OneOneClaw\" to apply."
+  },
+  {
+    "key": "oneone.channelsSaveFailed",
+    "value": "Save failed"
+  },
+  {
+    "key": "oneone.channelsSaveConfirm",
+    "value": "Write current channel config to OpenClaw config file? This will overwrite existing channels."
+  },
+  {
+    "key": "alerts.title",
+    "value": "Alert Center"
+  },
+  {
+    "key": "alerts.subtitle",
+    "value": "Configure system alerts and notifications"
+  },
+  {
+    "key": "alerts.enableAlerts",
+    "value": "Enable Alerts"
+  },
+  {
+    "key": "alerts.enableDesc",
+    "value": "Turn on/off all alert notifications"
+  },
+  {
+    "key": "alerts.receiveAgent",
+    "value": "Alert Receiver (Expert Squad)"
+  },
+  {
+    "key": "alerts.rules",
+    "value": "Alert Rules"
+  },
+  {
+    "key": "alerts.rulesDesc",
+    "value": "Configure which conditions trigger alerts"
+  },
+  {
+    "key": "alerts.triggered",
+    "value": "Alerts Triggered ({count})"
+  },
+  {
+    "key": "alerts.checking",
+    "value": "Checking alerts..."
+  },
+  {
+    "key": "alerts.checkNow",
+    "value": "Check Now"
+  },
+  {
+    "key": "alerts.checkInterval",
+    "value": "Check Interval"
+  },
+  {
+    "key": "common.loading",
+    "value": "thinking..."
+  },
+  {
+    "key": "common.loadError",
+    "value": "Failed to load"
+  },
+  {
+    "key": "common.backHome",
+    "value": "← Back to Home"
+  },
+  {
+    "key": "common.backOverview",
+    "value": "← Back to Overview"
+  },
+  {
+    "key": "common.noData",
+    "value": "No data"
+  },
+  {
+    "key": "common.close",
+    "value": "Close"
+  },
+  {
+    "key": "common.test",
+    "value": "🧪 Test"
+  },
+  {
+    "key": "common.testing",
+    "value": "⏳ Testing..."
+  },
+  {
+    "key": "common.justNow",
+    "value": "just now"
+  },
+  {
+    "key": "common.minutesAgo",
+    "value": "min ago"
+  },
+  {
+    "key": "common.hoursAgo",
+    "value": "hours ago"
+  },
+  {
+    "key": "common.daysAgo",
+    "value": "days ago"
+  },
+  {
+    "key": "common.manualRefresh",
+    "value": "Manual Refresh"
+  },
+  {
+    "key": "common.seconds",
+    "value": "seconds"
+  },
+  {
+    "key": "common.minute",
+    "value": "minute"
+  },
+  {
+    "key": "common.minutes",
+    "value": "minutes"
+  },
+  {
+    "key": "common.retry",
+    "value": "Retry"
+  },
+  {
+    "key": "home.title",
+    "value": "🐾 OpenClaw Bot Dashboard"
+  },
+  {
+    "key": "home.agentCount",
+    "value": "experts"
+  },
+  {
+    "key": "home.pageTitle",
+    "value": "ONECLAW Expert Squad"
+  },
+  {
+    "key": "home.defaultModel",
+    "value": "Default model"
+  },
+  {
+    "key": "home.viewModels",
+    "value": "View Models →"
+  },
+  {
+    "key": "home.skillMgmt",
+    "value": "🧩 Skills"
+  },
+  {
+    "key": "home.testAll",
+    "value": "Test Bound Models"
+  },
+  {
+    "key": "home.testingAll",
+    "value": "Testing..."
+  },
+  {
+    "key": "home.testOk",
+    "value": "OK"
+  },
+  {
+    "key": "home.testFail",
+    "value": "Failed"
+  },
+  {
+    "key": "home.updatedAt",
+    "value": "Updated at"
+  },
+  {
+    "key": "home.refreshManual",
+    "value": "🔄 Manual Refresh"
+  },
+  {
+    "key": "home.globalTrend",
+    "value": "📊 Global Statistics"
+  },
+  {
+    "key": "home.totalInputToken",
+    "value": "Total Input Token"
+  },
+  {
+    "key": "home.totalOutputToken",
+    "value": "Total Output Token"
+  },
+  {
+    "key": "home.totalMessages",
+    "value": "Total Messages"
+  },
+  {
+    "key": "home.tokenTrend",
+    "value": "🔢 Token Usage Trend"
+  },
+  {
+    "key": "home.avgResponseTrend",
+    "value": "⏱️ Avg Response Time Trend"
+  },
+  {
+    "key": "home.groupTopology",
+    "value": "💬 Group Chat Topology"
+  },
+  {
+    "key": "home.fallbackModels",
+    "value": "🔄 Fallback Models"
+  },
+  {
+    "key": "home.feishuGroup",
+    "value": "Feishu Group"
+  },
+  {
+    "key": "home.discordChannel",
+    "value": "Discord Channel"
+  },
+  {
+    "key": "home.bots",
+    "value": "experts"
+  },
+  {
+    "key": "home.noResponseData",
+    "value": "No response time data"
+  },
+  {
+    "key": "home.testPlatforms",
+    "value": "Test Platforms"
+  },
+  {
+    "key": "home.testingPlatforms",
+    "value": "Testing Platforms..."
+  },
+  {
+    "key": "home.testSessions",
+    "value": "Test Agents"
+  },
+  {
+    "key": "home.testingSessions",
+    "value": "Testing..."
+  },
+  {
+    "key": "home.testDmSessions",
+    "value": "Test DM Sessions"
+  },
+  {
+    "key": "home.testingDmSessions",
+    "value": "Testing..."
+  },
+  {
+    "key": "home.agentTaskTracking",
+    "value": "Agent Task Tracking"
+  },
+  {
+    "key": "home.agentTaskSubtasks",
+    "value": "Subtasks"
+  },
+  {
+    "key": "home.agentTaskCron",
+    "value": "Cron Jobs"
+  },
+  {
+    "key": "home.agentTaskState.working",
+    "value": "Running"
+  },
+  {
+    "key": "home.agentTaskState.waiting",
+    "value": "Waiting"
+  },
+  {
+    "key": "home.agentTaskState.idle",
+    "value": "Idle"
+  },
+  {
+    "key": "home.agentTaskNoSubtasks",
+    "value": "No active subtasks"
+  },
+  {
+    "key": "home.agentTaskNoCron",
+    "value": "No cron activity"
+  },
+  {
+    "key": "home.agentTaskCronState.running",
+    "value": "Running"
+  },
+  {
+    "key": "home.agentTaskCronState.success",
+    "value": "Success"
+  },
+  {
+    "key": "home.agentTaskCronState.failed",
+    "value": "Failed"
+  },
+  {
+    "key": "home.agentTaskCronFailures",
+    "value": "Failures"
+  },
+  {
+    "key": "home.agentTaskCronNoSummary",
+    "value": "No summary"
+  },
+  {
+    "key": "home.agentTaskCronDuration",
+    "value": "Duration"
+  },
+  {
+    "key": "home.agentTaskCronNextRun",
+    "value": "Next run"
+  },
+  {
+    "key": "home.configNotFoundHint",
+    "value": "Ensure OpenClaw is installed and the config path is correct. For a custom path, create .env.local in the project root with OPENCLAW_HOME=your/.openclaw/path."
+  },
+  {
+    "key": "home.configParseErrorHint",
+    "value": "openclaw.json is invalid. OpenClaw expects strict JSON: no // or /* */ comments and no trailing commas. Fix the file and refresh."
+  },
+  {
+    "key": "agent.model",
+    "value": "Model"
+  },
+  {
+    "key": "agent.platform",
+    "value": "Platform"
+  },
+  {
+    "key": "agent.feishuAppId",
+    "value": "Feishu App ID"
+  },
+  {
+    "key": "agent.sessionCount",
+    "value": "Sessions"
+  },
+  {
+    "key": "agent.messageCount",
+    "value": "Messages"
+  },
+  {
+    "key": "agent.tokenUsage",
+    "value": "Token Usage"
+  },
+  {
+    "key": "agent.totalTokenTip",
+    "value": "Total token usage"
+  },
+  {
+    "key": "agent.stats",
+    "value": "Stats"
+  },
+  {
+    "key": "agent.lastActive",
+    "value": "Last Active"
+  },
+  {
+    "key": "agent.todayAvgResponse",
+    "value": "Avg Response"
+  },
+  {
+    "key": "agent.todayAvgResponseTip",
+    "value": "Today's average response time"
+  },
+  {
+    "key": "agent.switchModel",
+    "value": "Switch Model"
+  },
+  {
+    "key": "agent.saveModel",
+    "value": "Save & Apply"
+  },
+  {
+    "key": "agent.cancelModel",
+    "value": "Cancel"
+  },
+  {
+    "key": "agent.modelSaving",
+    "value": "Applying..."
+  },
+  {
+    "key": "agent.modelApplyHint",
+    "value": "Saving will restart the Gateway automatically to apply the new model."
+  },
+  {
+    "key": "agent.modelApplyFailed",
+    "value": "Failed to apply model"
+  },
+  {
+    "key": "agent.currentUnknownModel",
+    "value": "Current model (not in option list)"
+  },
+  {
+    "key": "agent.status.working",
+    "value": "Working"
+  },
+  {
+    "key": "agent.status.online",
+    "value": "Online"
+  },
+  {
+    "key": "agent.status.idle",
+    "value": "Idle"
+  },
+  {
+    "key": "agent.status.offline",
+    "value": "Offline"
+  },
+  {
+    "key": "agent.inUse",
+    "value": "Used by:"
+  },
+  {
+    "key": "agent.openChat",
+    "value": "Click to open chat"
+  },
+  {
+    "key": "platform.feishu",
+    "value": "📱 Feishu"
+  },
+  {
+    "key": "platform.yuanbao",
+    "value": "🤖 Yuanbao"
+  },
+  {
+    "key": "platform.discord",
+    "value": "🎮 Discord"
+  },
+  {
+    "key": "platform.telegram",
+    "value": "✈️ Telegram"
+  },
+  {
+    "key": "platform.whatsapp",
+    "value": "💬 WhatsApp"
+  },
+  {
+    "key": "platform.qqbot",
+    "value": "🐧 QQBot"
+  },
+  {
+    "key": "range.daily",
+    "value": "Daily"
+  },
+  {
+    "key": "range.weekly",
+    "value": "Weekly"
+  },
+  {
+    "key": "range.monthly",
+    "value": "Monthly"
+  },
+  {
+    "key": "refresh.manual",
+    "value": "Manual Refresh"
+  },
+  {
+    "key": "refresh.10s",
+    "value": "10s"
+  },
+  {
+    "key": "refresh.30s",
+    "value": "30s"
+  },
+  {
+    "key": "refresh.1m",
+    "value": "1 min"
+  },
+  {
+    "key": "refresh.5m",
+    "value": "5 min"
+  },
+  {
+    "key": "refresh.10m",
+    "value": "10 min"
+  },
+  {
+    "key": "models.title",
+    "value": "OpenClaw Model List"
+  },
+  {
+    "key": "models.providerCount",
+    "value": "Providers"
+  },
+  {
+    "key": "models.totalPrefix",
+    "value": ""
+  },
+  {
+    "key": "models.testAll",
+    "value": "🧪 Test All Models"
+  },
+  {
+    "key": "models.testingAll",
+    "value": "⏳ Testing..."
+  },
+  {
+    "key": "models.colModelId",
+    "value": "Model ID"
+  },
+  {
+    "key": "models.colName",
+    "value": "Name"
+  },
+  {
+    "key": "models.colAgentsPrimary",
+    "value": "Agents (primary model)"
+  },
+  {
+    "key": "models.agentsPrimaryNone",
+    "value": "None"
+  },
+  {
+    "key": "models.providerPerModelAgentsHint",
+    "value": "Each row shows which agents use this exact provider/modelId as their resolved primary model (agents.list[].model). Models used only via fallbacks show “None” here."
+  },
+  {
+    "key": "models.colAccessMode",
+    "value": "Access Mode"
+  },
+  {
+    "key": "models.accessModeApiKey",
+    "value": "api_key"
+  },
+  {
+    "key": "models.accessModeAuth",
+    "value": "auth"
+  },
+  {
+    "key": "models.colContext",
+    "value": "Context Window"
+  },
+  {
+    "key": "models.colMaxOutput",
+    "value": "Max Output"
+  },
+  {
+    "key": "models.colInputType",
+    "value": "Input Type"
+  },
+  {
+    "key": "models.colReasoning",
+    "value": "Reasoning"
+  },
+  {
+    "key": "models.colInputToken",
+    "value": "Input Token"
+  },
+  {
+    "key": "models.colOutputToken",
+    "value": "Output Token"
+  },
+  {
+    "key": "models.colAvgResponse",
+    "value": "Avg Response"
+  },
+  {
+    "key": "models.colTest",
+    "value": "Test"
+  },
+  {
+    "key": "models.noExplicitModels",
+    "value": "No explicit model definitions (inferred from provider name)"
+  },
+  {
+    "key": "models.defaultModel",
+    "value": "Default Model"
+  },
+  {
+    "key": "models.fallbackModels",
+    "value": "Fallback Models"
+  },
+  {
+    "key": "models.addModel",
+    "value": "Add model"
+  },
+  {
+    "key": "models.addModelDesc",
+    "value": "Probe first, then save via Gateway: models.providers; toolbar “None” also appends defaults.model.fallbacks only; a specific Agent also sets agents.list[].model and merges agents.defaults.models. Does not edit agents/*/agent/models.json. Provider must exist (server re-probes before save)."
+  },
+  {
+    "key": "models.addModelSectionTitle",
+    "value": "Add model (probe & save)"
+  },
+  {
+    "key": "models.addTargetProviderLabel",
+    "value": "Save under provider"
+  },
+  {
+    "key": "models.addModelId",
+    "value": "Model ID"
+  },
+  {
+    "key": "models.addModelName",
+    "value": "Display name"
+  },
+  {
+    "key": "models.addContext",
+    "value": "Context window (optional)"
+  },
+  {
+    "key": "models.addMaxOut",
+    "value": "Max output tokens (optional)"
+  },
+  {
+    "key": "models.addReasoning",
+    "value": "Reasoning"
+  },
+  {
+    "key": "models.addInputText",
+    "value": "Text input"
+  },
+  {
+    "key": "models.addInputImage",
+    "value": "Image input"
+  },
+  {
+    "key": "models.testDraft",
+    "value": "Test this model"
+  },
+  {
+    "key": "models.saveToConfig",
+    "value": "Save to config"
+  },
+  {
+    "key": "models.saveNeedTest",
+    "value": "Run a successful test before saving"
+  },
+  {
+    "key": "models.saveSuccess",
+    "value": "Saved to config"
+  },
+  {
+    "key": "models.saveSuccessBindHint",
+    "value": "Appended “{ref}” to agents.defaults.model.fallbacks (skipped if it matches primary)."
+  },
+  {
+    "key": "models.saveSuccessAgentHint",
+    "value": "Set agents.list entry “{agentId}”.model to “{ref}” and merged agents.defaults.models alias (valid JSON)."
+  },
+  {
+    "key": "models.saveSuccessFallbacksList",
+    "value": "Current defaults.fallbacks: {list}"
+  },
+  {
+    "key": "models.saveFailed",
+    "value": "Save failed"
+  },
+  {
+    "key": "models.configPathRead",
+    "value": "(config file used for list: {path})"
+  },
+  {
+    "key": "models.cancelAdd",
+    "value": "Cancel"
+  },
+  {
+    "key": "models.suggestedDefaults",
+    "value": "Suggested from model ID"
+  },
+  {
+    "key": "models.applySuggested",
+    "value": "Apply suggested"
+  },
+  {
+    "key": "models.applyReference",
+    "value": "Apply reference values"
+  },
+  {
+    "key": "models.enterIdForSuggest",
+    "value": "Enter the model ID above first. Then we show suggested context window and max output based on series hints in the ID (e.g. gemini, gpt-5, claude). These values are only for openclaw.json metadata and do not change how LiteLLM probing works."
+  },
+  {
+    "key": "models.suggestedGenericNote",
+    "value": "No known series matched; values below are conservative guesses—verify against LiteLLM or vendor docs before applying."
+  },
+  {
+    "key": "models.fillIdFirstPlaceholder",
+    "value": "Enter model ID first"
+  },
+  {
+    "key": "models.probeOverrideKeyLabel",
+    "value": "Temporary API key (optional)"
+  },
+  {
+    "key": "models.probeOverrideKeyPlaceholder",
+    "value": "For this session’s tests only; not saved to config"
+  },
+  {
+    "key": "models.probeOverrideKeyHint",
+    "value": "For internal debugging: paste a Bearer token if config/env has no valid key yet. Sent only with Test / pre-save probe requests to this app’s server—never written to openclaw.json or browser storage. Applies to direct probes for api openai-completions or anthropic-messages; openclaw CLI fallback ignores this field. Do not paste real secrets in public channels."
+  },
+  {
+    "key": "models.clearProbeKey",
+    "value": "Clear"
+  },
+  {
+    "key": "models.probePresetLabel",
+    "value": "Probe preset (JSON: URL / protocol / key)"
+  },
+  {
+    "key": "models.probePresetNone",
+    "value": "None (use each provider’s config)"
+  },
+  {
+    "key": "models.probePresetEmptyHint",
+    "value": "No presets loaded: copy model-probe-presets.example.json to model-probe-presets.json in the project root or ~/.openclaw, or add a modelProbePresets.presets array in openclaw.json."
+  },
+  {
+    "key": "models.probePresetBatchNote",
+    "value": "“Test all” always uses per-provider settings, not this preset. Single-row tests and add-model tests use the selected preset."
+  },
+  {
+    "key": "models.probePresetNoInlineEditHint",
+    "value": "Presets can’t be edited inline here; edit model-probe-presets.json or modelProbePresets in openclaw.json, then refresh. Add-model tests in OpenClaw-provider mode use the same source when a toolbar preset is selected."
+  },
+  {
+    "key": "models.saveWritesViaGatewayHint",
+    "value": "“Save to config” patches openclaw.json: models.providers + defaults.model.fallbacks by default. Toolbar “None” = fallbacks only; a specific Agent also updates that agents.list item’s model and agents.defaults.models aliases. Red = failed write."
+  },
+  {
+    "key": "models.probeAgentLabel",
+    "value": "Agent (probe merge + save binding)"
+  },
+  {
+    "key": "models.probeAgentNone",
+    "value": "None (global fallbacks only; no agents.list binding)"
+  },
+  {
+    "key": "models.probeAgentHint",
+    "value": "“None”: probes without per-agent models.json merge. Specific agent: merges that folder. On save: “None” only appends fallbacks; an agent sets agents.list[].model to provider/modelId and merges { \"alias\": \"…\" } under agents.defaults.models."
+  },
+  {
+    "key": "models.probeAgentWriteHint",
+    "value": "Does not write agents/*/agent/models.json—only openclaw.json via Gateway. Shapes match strict JSON (quoted keys, no comments)."
+  },
+  {
+    "key": "models.addProbeModeLabel",
+    "value": "How to probe"
+  },
+  {
+    "key": "models.addProbeModeOpenClaw",
+    "value": "OpenClaw provider (LiteLLM, etc.)"
+  },
+  {
+    "key": "models.addProbeModeCustomHttp",
+    "value": "Custom / vendor HTTP (base URL + protocol)"
+  },
+  {
+    "key": "models.addProbeModeHint",
+    "value": "LiteLLM is just one common provider shape; pick Custom HTTP for your own gateway. If you select a toolbar probe preset, that preset’s URL/protocol takes precedence for the test (you still pick the save target provider below)."
+  },
+  {
+    "key": "models.openClawGatewayHelpTitle",
+    "value": "OpenClaw / gateway fields (incl. LiteLLM)"
+  },
+  {
+    "key": "models.openClawGatewayHelpBody",
+    "value": "• models.providers.<id>.baseUrl: gateway root (openai-completions → /chat/completions; anthropic-messages → /v1/messages).\n• api: often \"openai-completions\" or \"anthropic-messages\".\n• apiKey: key for the gateway; may combine with auth.profiles.\n\nmodels[] entry: id (must match upstream route), name, contextWindow, maxTokens, input, reasoning.\n\nProbes merge agents/<Agent>/agent/models.json, main, and openclaw.json; ALL_CAPS apiKey reads from env."
+  },
+  {
+    "key": "models.customHttpHelpTitle",
+    "value": "Custom / vendor HTTP probe"
+  },
+  {
+    "key": "models.customHttpHelpBody",
+    "value": "Set root URL (no path suffix), protocol, and the temporary API key in the toolbar. Only this request is direct-probed; saving still writes to the expanded provider block."
+  },
+  {
+    "key": "models.customHttpBaseUrl",
+    "value": "Gateway base URL"
+  },
+  {
+    "key": "models.customHttpProtocol",
+    "value": "Protocol (HTTP path style)"
+  },
+  {
+    "key": "models.fieldModel",
+    "value": "model (API model id)"
+  },
+  {
+    "key": "models.fieldModelPlaceholder",
+    "value": "e.g. qwen3-max, gpt-4o"
+  },
+  {
+    "key": "models.fieldModelProvider",
+    "value": "model_provider (vendor label, optional)"
+  },
+  {
+    "key": "models.fieldModelProviderPlaceholder",
+    "value": "e.g. JoyMaas, self-hosted"
+  },
+  {
+    "key": "models.addFormUsesAgent",
+    "value": "Probe context (tests only):"
+  },
+  {
+    "key": "models.addFormUsesAgentSuffix",
+    "value": "(same as toolbar; only openclaw.json; picking an Agent also binds agents.list + defaults.models)"
+  },
+  {
+    "key": "models.liteLlmHelpTitle",
+    "value": "LiteLLM / openclaw.json model fields"
+  },
+  {
+    "key": "models.liteLlmHelpBody",
+    "value": "• models.providers.<id>.baseUrl: your LiteLLM base URL (OpenClaw builds OpenAI-compatible paths).\n• api: usually \"openai-completions\".\n• apiKey: key sent to LiteLLM; may work together with auth.profiles.\n\nEach item in models[] typically has: id (must match LiteLLM route name), name, contextWindow, maxTokens, input (e.g. [\"text\",\"image\"]), reasoning.\n\nThe dashboard probe merges openclaw.json with agents/main/agent/models.json. ALL_CAPS apiKey placeholders (e.g. LITELLM_API_KEY) are resolved from environment variables. If only the placeholder was used before, LiteLLM often returns \"invalid key\"."
+  },
+  {
+    "key": "stats.title",
+    "value": "Message Statistics"
+  },
+  {
+    "key": "stats.subtitle",
+    "value": "Token usage and response time analysis"
+  },
+  {
+    "key": "stats.totalInputToken",
+    "value": "Total Input Token"
+  },
+  {
+    "key": "stats.totalOutputToken",
+    "value": "Total Output Token"
+  },
+  {
+    "key": "stats.totalMessages",
+    "value": "Total Messages"
+  },
+  {
+    "key": "stats.dataPeriod",
+    "value": "Data Period"
+  },
+  {
+    "key": "stats.tokenConsumption",
+    "value": "🔢 Token Usage"
+  },
+  {
+    "key": "stats.avgResponseTime",
+    "value": "⏱️ Avg Response Time"
+  },
+  {
+    "key": "stats.sessionList",
+    "value": "📋 Sessions"
+  },
+  {
+    "key": "stats.home",
+    "value": "← Home"
+  },
+  {
+    "key": "stats.missingAgent",
+    "value": "Missing agent parameter"
+  },
+  {
+    "key": "stats.noResponseData",
+    "value": "No response time data"
+  },
+  {
+    "key": "stats.selectAgent",
+    "value": "Select an expert to view message statistics"
+  },
+  {
+    "key": "stats.backToAgents",
+    "value": "← Back to expert squad"
+  },
+  {
+    "key": "sessions.title",
+    "value": "Sessions"
+  },
+  {
+    "key": "sessions.sessionCount",
+    "value": "sessions"
+  },
+  {
+    "key": "sessions.totalToken",
+    "value": "Total Token"
+  },
+  {
+    "key": "sessions.missingAgent",
+    "value": "Missing agent parameter"
+  },
+  {
+    "key": "sessions.type.main",
+    "value": "Main"
+  },
+  {
+    "key": "sessions.type.feishu-dm",
+    "value": "Feishu DM"
+  },
+  {
+    "key": "sessions.type.feishu-group",
+    "value": "Feishu Group"
+  },
+  {
+    "key": "sessions.type.discord-dm",
+    "value": "Discord DM"
+  },
+  {
+    "key": "sessions.type.discord-channel",
+    "value": "Discord Channel"
+  },
+  {
+    "key": "sessions.type.telegram-dm",
+    "value": "Telegram DM"
+  },
+  {
+    "key": "sessions.type.telegram-group",
+    "value": "Telegram Group"
+  },
+  {
+    "key": "sessions.type.whatsapp-dm",
+    "value": "WhatsApp DM"
+  },
+  {
+    "key": "sessions.type.whatsapp-group",
+    "value": "WhatsApp Group"
+  },
+  {
+    "key": "sessions.type.cron",
+    "value": "Cron Job"
+  },
+  {
+    "key": "sessions.type.unknown",
+    "value": "Unknown"
+  },
+  {
+    "key": "sessions.test",
+    "value": "Test"
+  },
+  {
+    "key": "sessions.testing",
+    "value": "Testing..."
+  },
+  {
+    "key": "sessions.testOk",
+    "value": "✅ OK"
+  },
+  {
+    "key": "sessions.testFail",
+    "value": "❌ Failed"
+  },
+  {
+    "key": "sessions.testReply",
+    "value": "Reply"
+  },
+  {
+    "key": "sessions.testTime",
+    "value": "Time"
+  },
+  {
+    "key": "sessions.context",
+    "value": "Context"
+  },
+  {
+    "key": "sessions.selectAgent",
+    "value": "Select an expert to view sessions"
+  },
+  {
+    "key": "sessions.testAll",
+    "value": "🧪 Test All"
+  },
+  {
+    "key": "sessions.testingAll",
+    "value": "⏳ Testing..."
+  },
+  {
+    "key": "sessions.testHint",
+    "value": "Tests verify agent responsiveness only. Messages won't appear in Feishu/Discord chats."
+  },
+  {
+    "key": "sessions.testAllResult",
+    "value": "Test complete"
+  },
+  {
+    "key": "sessions.testAllOk",
+    "value": "passed"
+  },
+  {
+    "key": "sessions.testAllFail",
+    "value": "failed"
+  },
+  {
+    "key": "sessions.backToAgents",
+    "value": "← Back to expert squad"
+  },
+  {
+    "key": "skills.title",
+    "value": "🧩 Skill Management"
+  },
+  {
+    "key": "skills.count",
+    "value": "skills"
+  },
+  {
+    "key": "skills.builtin",
+    "value": "Built-in"
+  },
+  {
+    "key": "skills.extension",
+    "value": "Extension"
+  },
+  {
+    "key": "skills.custom",
+    "value": "Custom"
+  },
+  {
+    "key": "skills.all",
+    "value": "All"
+  },
+  {
+    "key": "skills.search",
+    "value": "Search skills..."
+  },
+  {
+    "key": "skills.showing",
+    "value": "Showing"
+  },
+  {
+    "key": "skills.unit",
+    "value": ""
+  },
+  {
+    "key": "skills.noDesc",
+    "value": "No description"
+  },
+  {
+    "key": "skills.source.builtin",
+    "value": "Built-in"
+  },
+  {
+    "key": "skills.source.custom",
+    "value": "Custom"
+  },
+  {
+    "key": "skills.viewSource",
+    "value": "View SKILL.md"
+  },
+  {
+    "key": "skills.contentTitle",
+    "value": "SKILL.md"
+  },
+  {
+    "key": "skills.loadingContent",
+    "value": "Loading skill content..."
+  },
+  {
+    "key": "skills.contentLoadFailed",
+    "value": "Failed to load skill content"
+  },
+  {
+    "key": "gateway.healthy",
+    "value": "Gateway is running"
+  },
+  {
+    "key": "gateway.unhealthy",
+    "value": "Gateway is down"
+  },
+  {
+    "key": "gateway.fetchError",
+    "value": "Cannot check Gateway status"
+  },
+  {
+    "key": "pixelOffice.title",
+    "value": "1One的Openclaw办公室"
+  },
+  {
+    "key": "pixelOffice.editMode",
+    "value": "Edit Layout"
+  },
+  {
+    "key": "pixelOffice.exitEdit",
+    "value": "Exit Edit"
+  },
+  {
+    "key": "pixelOffice.save",
+    "value": "Save"
+  },
+  {
+    "key": "pixelOffice.reset",
+    "value": "Reset"
+  },
+  {
+    "key": "pixelOffice.undo",
+    "value": "Undo"
+  },
+  {
+    "key": "pixelOffice.redo",
+    "value": "Redo"
+  },
+  {
+    "key": "pixelOffice.sound",
+    "value": "Sound"
+  },
+  {
+    "key": "pixelOffice.resetView",
+    "value": "Reset View"
+  },
+  {
+    "key": "pixelOffice.gameScene",
+    "value": "Game scene"
+  },
+  {
+    "key": "pixelOffice.game.classic",
+    "value": "Classic office (original art)"
+  },
+  {
+    "key": "pixelOffice.game.starship",
+    "value": "Starship bridge (themed)"
+  },
+  {
+    "key": "pixelOffice.game.grove",
+    "value": "Mushroom grove (themed)"
+  },
+  {
+    "key": "pixelOffice.state.working",
+    "value": "Working"
+  },
+  {
+    "key": "pixelOffice.state.idle",
+    "value": "Idle"
+  },
+  {
+    "key": "pixelOffice.state.offline",
+    "value": "Offline"
+  },
+  {
+    "key": "pixelOffice.state.waiting",
+    "value": "Waiting"
+  },
+  {
+    "key": "pixelOffice.tempWorker",
+    "value": "Temp"
+  },
+  {
+    "key": "pixelOffice.tempWorker.source",
+    "value": "Temp Worker Source"
+  },
+  {
+    "key": "pixelOffice.tempWorker.createdBy",
+    "value": "created subagent"
+  },
+  {
+    "key": "pixelOffice.broadcast.online",
+    "value": "is online"
+  },
+  {
+    "key": "pixelOffice.broadcast.offline",
+    "value": "is offline"
+  },
+  {
+    "key": "pixelOffice.heatmap.title",
+    "value": "Agent Activity Heatmap"
+  },
+  {
+    "key": "pixelOffice.heatmap.messages",
+    "value": "messages"
+  },
+  {
+    "key": "pixelOffice.idleRank.title",
+    "value": "Slacking Leaderboard"
+  },
+  {
+    "key": "pixelOffice.idleRank.online",
+    "value": "Online"
+  },
+  {
+    "key": "pixelOffice.idleRank.active",
+    "value": "Active"
+  },
+  {
+    "key": "pixelOffice.idleRank.idle",
+    "value": "Slacking"
+  },
+  {
+    "key": "pixelOffice.serverStatus.checking",
+    "value": "Checking server status..."
+  },
+  {
+    "key": "pixelOffice.serverStatus.healthy",
+    "value": "Service healthy"
+  },
+  {
+    "key": "pixelOffice.serverStatus.degraded",
+    "value": "Service degraded"
+  },
+  {
+    "key": "pixelOffice.serverStatus.down",
+    "value": "Service down"
+  },
+  {
+    "key": "pixelOffice.serverStatus.unknown",
+    "value": "Service status unknown"
+  },
+  {
+    "key": "pixelOffice.serverStatus.fetchFailed",
+    "value": "Failed to check service status"
+  },
+  {
+    "key": "pixelOffice.gatewaySre.name",
+    "value": "OnCall SRE"
+  },
+  {
+    "key": "pixelOffice.gatewaySre.statusLabel",
+    "value": "Gateway status"
+  },
+  {
+    "key": "pixelOffice.gatewaySre.responseMs",
+    "value": "Check latency"
+  },
+  {
+    "key": "pixelOffice.gatewaySre.status.unknown",
+    "value": "Monitoring"
+  },
+  {
+    "key": "pixelOffice.gatewaySre.status.healthy",
+    "value": "Healthy"
+  },
+  {
+    "key": "pixelOffice.gatewaySre.status.degraded",
+    "value": "Degraded"
+  },
+  {
+    "key": "pixelOffice.gatewaySre.status.down",
+    "value": "Down"
+  },
+  {
+    "key": "pixelOffice.gatewaySre.tip.unknown",
+    "value": "Waiting for gateway health data"
+  },
+  {
+    "key": "pixelOffice.gatewaySre.tip.healthy",
+    "value": "Gateway healthy"
+  },
+  {
+    "key": "pixelOffice.gatewaySre.tip.degraded",
+    "value": "Gateway degraded: latency high"
+  },
+  {
+    "key": "pixelOffice.gatewaySre.tip.down",
+    "value": "Gateway down"
+  },
+  {
+    "key": "pixelOffice.floatingCode.tooltip",
+    "value": "Code snippet that floats while this expert is working (decorative, not a real terminal)"
+  }
+]

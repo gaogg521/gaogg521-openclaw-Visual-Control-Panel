@@ -1,0 +1,27 @@
+{
+  "name": "openclaw-bot-review",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3003",
+    "build": "next build",
+    "start": "next start -p 3003",
+    "generate-pixel-assets": "node scripts/generate-pixel-office-assets.mjs",
+    "i18n:merge-sea": "node scripts/merge-sea-chunks.mjs"
+  },
+  "dependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "mysql2": "^3.20.0",
+    "next": "^16.0.0",
+    "postcss": "^8.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
+  "devDependencies": {
+    "sharp": "^0.34.5"
+  }
+}
