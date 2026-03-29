@@ -1,255 +1,62 @@
-# OpenClaw Dashboard（English）
-
-**1one Lobster Office** — a **full-stack local control plane** for [OpenClaw](https://github.com/openclaw/openclaw), built with [Next.js](https://nextjs.org/): not one screen, but a **coherent toolbox** of dashboards, labs, wizards, and visual surfaces that stay in sync with your real `openclaw.json`, agents, sessions, and gateway.
-
-## Capability map — what ships in this repo
-
-| Area | Tools & surfaces you get |
-|------|---------------------------|
-| **Operations & SRE-style views** | Home + **OneOne dashboard**, **Gateway health** polling, **streaming `openclaw gateway restart`**, **alerts** (rules + Feishu hooks), **token & latency stats** with charts, **auto-refresh** (manual → 10m). |
-| **Agent work & “expert studio”** | **Agent Task Tracking** (subagents + cron from live `/api/agent-activity`), **Pixel Office** with **three** distinct game scenes (classic office, starship, grove), layout editor, heatmap, idle rank, gateway SRE mascot, **Expert squad** / **expert files** flows in the UI. |
-| **Models & config lab** | **Models** page: who uses which model, **per-model probe**, **temporary API keys**, **internal gateway presets**, **add model → write `openclaw.json`** via API; documented JSON shape in **`docs/openclaw-models-config.md`**. |
-| **Channels, sessions, chat** | **Channels** view, **Sessions** (DM / group / cron, tokens, connectivity tests), **Web `/chat`** against your gateway, **platform tests** (e.g. Feishu / Discord / DM flows). |
-| **Skills & onboarding** | **Skills** browser (search/filter), **`/setup` wizard** (precheck CLI → provider → `openclaw onboard --non-interactive`). |
-| **Global UX** | **Six UI languages** (zh / zh-TW / en / ms / id / th), **five themes** (not just light/dark), shared **ThemeSwitcher** + `localStorage`. |
-| **Data & deploy** | **Filesystem-first** (no DB required); **optional MySQL** mirror + sync/metrics APIs; **Docker** standalone image; **packaging** under `packaging/openclaw-oneclick/` + Windows journey docs. |
-
-If you only read one thing: this project is meant to be the **place you run OpenClaw day-to-day** — monitor, tune models, watch agents, play with Pixel Office, and operate the gateway — **without** abandoning the official CLI when you still need it.
-
-## Background
-
-When running multiple OpenClaw agents across different platforms (Feishu, Discord, etc.), managing and monitoring them becomes increasingly complex — which bot uses which model? Are the platforms connected? Is the gateway healthy? How are tokens being consumed?
-
-The UI is driven by your **local OpenClaw tree** (`openclaw.json`, agents, sessions). **No MySQL is required** for day-to-day use. Optionally, you can enable **MySQL** to mirror config/agents/channels/sessions and inspect sync status (see **Optional MySQL (sync & metrics)** below).
-
-Recent UX work includes **six UI languages** (with SEA packs in `lib/locales/`), **five visual themes** (not just dark/light), **three Pixel Office “game” scenes** (classic office, starship bridge, mushroom grove — each with its own map topology and atmosphere), and a richer **Models** page (who uses which model, probes, presets, add-to-config). Details below.
-
-## Features
-
-- **Home / Bot overview (`/`)** — Agent cards (model, platforms, session stats), gateway health, **same theme switcher as sidebar**, group-chat hints, **Agent Task Tracking** (subagents + cron jobs from `/api/agent-activity`; keeps the last “live” snapshot when everyone is idle/offline or the API returns an empty list)
-- **OneOne dashboard (`/oneone-dashboard`)** — Compact dashboard variant with the same data family as home
-- **Pixel Office (`/pixel-office`)** — Canvas “game” with **Classic / Starship / Grove** scenes, edit-save layout, optional critters, heatmap & idle rank, Gateway SRE character; see **Languages, themes, pixel worlds & live data**
-- **Models (`/models`)** — Providers/models, **used-by agents**, context limits, per-model test, presets, **add model → config** after a successful probe; see **Languages, themes, pixel worlds & live data**
-- **Channels (`/channels`)** — Channel-oriented view
-- **Sessions (`/sessions`)** — Per-agent sessions (DM / group / cron), tokens, connectivity test
-- **Statistics (`/stats`)** — Token usage and response-time trends (day/week/month) with SVG charts
-- **Alerts (`/alerts`)** — Rules (e.g. model down, bot silent) with Feishu notifications
-- **Skills (`/skills`)** — Installed skills with search/filter
-- **Web Chat (`/chat`)** — Browser chat against your OpenClaw Gateway (not in the main sidebar; open by URL)
-- **Gateway health** — Polling + link to OpenClaw web UI
-- **Platform tests** — Feishu/Discord bindings and DM sessions
-- **Auto refresh** — Manual, 10s, 30s, 1m, 5m, 10m
-
-### Recent stability & UX updates (Mar 2026)
-
-Polling and OpenClaw CLI usage were tightened so a slow `/api/agent-activity` or `/api/gateway-health` does **not** spawn **hundreds of `node` processes**: **serial client polling**, **single-flight** request coalescing on the server, **sequential** gateway RPCs (no parallel `openclaw` bursts), **`AbortController`** where early timeouts apply, and **`npm run dev` checks port 3003** via `scripts/check-dev-port.mjs` before starting Next. **Restart OneOneClaw** on `/oneone-dashboard` uses **streaming stdout/stderr** (terminal-like). Technical changelog: **[docs/RECENT_OPTIMIZATIONS_2026-03-27.zh-CN.md](docs/RECENT_OPTIMIZATIONS_2026-03-27.zh-CN.md)** (Chinese).
-
-### Languages, themes, pixel worlds & live data
-
-- **Internationalization** — Sidebar language selector: **简体中文**, **繁體中文**, **English**, **Bahasa Melayu**, **Bahasa Indonesia**, **ไทย**. Large zh / zh-TW / en tables live in `lib/i18n.tsx`; **ms / id / th** ship as `lib/locales/ms.json`, `id.json`, `th.json`. Missing keys **fall back** to English, then Simplified Chinese. Maintainers can run **`npm run i18n:merge-sea`** to merge SEA locale chunk files.
-
-- **Themes (five skins)** — Not “Chinese vs English” and not only two modes: **dark (deep sea)**, **light (minimal)**, **cyber blue**, **warm orange**, and **forest green** — the same `ThemeSwitcher` as the home page, applied via **`data-theme`** on `<html>` and stored in **`localStorage`**.
-
-- **Pixel Office — three game scenes** — **Classic office** (original pixel art + office floorplan), **Starship bridge** (ship topology, **starfield**, cyan frame / glow), **Mushroom grove** (forest topology, **walkable stream** tiles, green ambience). Implemented in `lib/pixel-office/layout/alternateLayouts.ts` and `gameThemes.ts`. The page supports **layout edit, undo/redo, save**, optional **“bugs”** critter overlay, **agent activity heatmap**, **slacking leaderboard**, **Gateway on-call SRE** character tied to health checks, HUD / nameplate polish, and **decorative floating code** while agents work. Layout file: **`$OPENCLAW_HOME/pixel-office/layout.json`**. After changing the art pipeline, run **`npm run generate-pixel-assets`** to regenerate sprites.
-
-- **Models workspace** — Shows **which agents use each model**, **per-model test** (with optional **temporary API key**), **model-probe presets** for internal gateways, and **Add model** writing through **`/api/config/add-provider-model`** once the probe succeeds. JSON alignment is documented in **`docs/openclaw-models-config.md`**.
-
-- **Live configuration** — The dashboard still reads **`openclaw.json`**, per-agent dirs, and session files under **`OPENCLAW_HOME`**. The UI does **not** need a database; **MySQL** is optional for sync/metrics only (see below).
-
-## Main routes
-
-| Path | Purpose |
-|------|---------|
-| `/` | Home — agents + task tracking |
-| `/oneone-dashboard` | Alternate dashboard |
-| `/pixel-office` | Pixel office / game-style scene |
-| `/models` | Models & probes |
-| `/channels` | Channels |
-| `/sessions` | Sessions |
-| `/stats` | Statistics |
-| `/alerts` | Alerts |
-| `/skills` | Skills |
-| `/chat` | Gateway web chat |
-| `/setup` | **Setup wizard** (precheck CLI → provider → credentials → confirm → done; calls `openclaw onboard --non-interactive`) |
-
-API routes live under `app/api/` (e.g. `agent-activity`, `config`, `openclaw/*`, `pixel-office/*`, `storage/*`, `setup/onboard`).
-
-### Windows installer UX (user-centric, Chinese)
-
-If you ship a **Windows `.exe` / zip** bundle, see **[packaging/openclaw-oneclick/WINDOWS_USER_JOURNEY.zh-CN.md](packaging/openclaw-oneclick/WINDOWS_USER_JOURNEY.zh-CN.md)** for two recommended flows: **classic setup wizard** vs **start local port 3003 first, then browser `/setup`**. It clarifies when `http://localhost:3003/setup` appears and how it relates to installing the `openclaw` CLI.
-
-**Handoff / progress log (deploy wizard + Full installer, zh-CN):** **[docs/DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md](docs/DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md)** — `OpenClawOneClick.Full.iss`, redist scripts, PATH helper, `FULL_INSTALL.md`, and suggested next steps. Same-day scratch notes: **[WORK_SESSION_2026-03-17.md](WORK_SESSION_2026-03-17.md)**.
-
-## Preview
-
-All screenshots below live in **[`docs/`](docs/)** (paths are relative to this README). Refresh these assets when the UI changes so the README stays current.
-
-### Home & dashboards
-![Bot dashboard](docs/bot_dashboard.png)
-![Dashboard](docs/dashboard.png)
-![Dashboard wide preview](docs/dashboard-preview.jpg)
-
-### Models & sessions
-![Models](docs/models-preview.png)
-![Sessions](docs/sessions-preview.png)
-
-### Pixel Office & game scenes
-![Pixel Office](docs/pixel-office.png)
-![Game scene — classic office](docs/游戏场景-办公室.png)
-![Game scene — starship bridge](docs/游戏场景-星际剑桥.png)
-![Game scene — mushroom grove](docs/游戏场景-蘑菇林地.png)
-
-### Expert squad & expert files
-![Expert squad](docs/专家战队.png)
-![Expert files](docs/专家文件管理.png)
-![Expert files (alternate)](docs/专家文件管理1.png)
-
-### Themes & locales (5 themes · 6 UI languages)
-![Theme switching](docs/主题变化.png)
-![Traditional Chinese UI](docs/繁体.png)
-![Malay UI](docs/马来语.png)
-![Indonesian UI](docs/印尼语.png)
-![Thai UI](docs/泰语.png)
-
-### Alerts, model switch, stats, channels
-![Alert center](docs/告警中心.png)
-![Model switch](docs/模型切换.png)
-![Message statistics](docs/消息统计.png)
-![Channel management](docs/通道管理.png)
-
-### Setup wizard (minimal install / 极简安装)
-![Setup wizard overview](docs/极简的安装.png)
-![Setup wizard step 2](docs/极简安装2.png)
-![Setup wizard step 3](docs/极简安装3.png)
-![Setup wizard step 4](docs/极简安装4.png)
-
-### Docs in `docs/` (text)
-- [DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md](docs/DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md) — Windows packaging / installer handoff (zh-CN)  
-- [openclaw-models-config.md](docs/openclaw-models-config.md) — `models.providers` alignment with the dashboard  
-- [RECENT_OPTIMIZATIONS_2026-03-27.zh-CN.md](docs/RECENT_OPTIMIZATIONS_2026-03-27.zh-CN.md) — stability & polling / OpenClaw CLI notes
-
-## Getting Started
-
-### Fastest paths (pick one)
-
-1. **Windows `.exe` (end users — no separate Node install)** — Run **`ONE Claw … Setup ….exe`** from your release, or build it with [`packaging/electron/build-electron.ps1`](packaging/electron/build-electron.ps1) (output: [`packaging/electron/dist/`](packaging/electron/)). After install, Electron starts the bundled Next server on **3003** and opens the browser (typically **`/setup`**). How it works: [`packaging/electron/README.md`](packaging/electron/README.md).
-2. **From source (developers)** — Clone this folder → `npm install` → `npm run dev` → open **http://localhost:3003** (commands below). If your OpenClaw tree is not `~/.openclaw`, set **`OPENCLAW_HOME`** in `.env.local` (see **Configuration**).
-3. **OpenClaw onboarding only** — With the dashboard already running, open **http://localhost:3003/setup** and finish the wizard (CLI precheck → provider → credentials → `openclaw onboard`).
-
-For **install order** on Windows (classic installer vs “start port 3003 first, then `/setup`”), read **[`packaging/openclaw-oneclick/WINDOWS_USER_JOURNEY.zh-CN.md`](packaging/openclaw-oneclick/WINDOWS_USER_JOURNEY.zh-CN.md)** (Chinese; still useful for English readers planning Windows rollouts).
-
-**macOS / Linux (e.g. Ubuntu):** use **from source** (path 2) or **Docker** below. Install **Node.js 18+** (on Ubuntu, distro `nodejs` packages are often too old — prefer [nvm](https://github.com/nvm-sh/nvm) or [NodeSource](https://github.com/nodesource/distributions)), then the same `npm install` / `npm run dev` flow as on Windows. The **`.exe`** installer is **Windows-only**. [`electron-builder.config.js`](packaging/electron/electron-builder.config.js) targets **NSIS on Windows** only — no **`.dmg`** (macOS) or **AppImage / `.deb`** (Linux) is built here unless you add `mac` / `linux` targets.
-
-See [Quick Start Guide](quick_start.md) for prompt / git / skill install options.
-
-This app lives under the monorepo folder **`软件SOFT/龙虾可视化控制面板`**. After cloning [Openclaw-SKILLS-OneOne-](https://github.com/gaogg521/Openclaw-SKILLS-OneOne-.git):
-
-```bash
-git clone https://github.com/gaogg521/Openclaw-SKILLS-OneOne-.git
-cd Openclaw-SKILLS-OneOne-/软件SOFT/龙虾可视化控制面板
-
-npm install
-npm run dev
-```
-
-- **Dev / local production** (`npm run dev` / `npm run start`) uses **port `3003`** (see `package.json`).
-- **`npm run dev`** runs **`node scripts/check-dev-port.mjs`** first: if **3003** is already in use, the command exits — stop the old Next.js process before starting another.
-- Open **http://localhost:3003** in your browser.
-
-Other scripts:
-
-- `npm run build` — production build  
-- `npm run start` — serve production build on port **3003**  
-- `npm run generate-pixel-assets` — regenerate pixel-office asset sprites  
-- `npm run i18n:merge-sea` — merge SEA locale chunks (maintainers)
-
-### One-click installer (OpenClaw + Lobster)
-
-Experimental packaging lives in **[`packaging/openclaw-oneclick/`](packaging/openclaw-oneclick/)**: official **silent** `install.sh` / `install.ps1`, **skip reinstall if `openclaw` is already on PATH**, **gateway / lobster port conflict checks**, `openclaw onboard --non-interactive` via `config/wizard.env`, then open **OpenClaw Web** and **`http://localhost:3003/oneone-dashboard`**. See also the community desktop app **[OneClaw](https://github.com/oneclaw/oneclaw)** for a comparable “conflict detection” UX. Full **DMG/EXE** still needs bundling **Node 22** + Inno / macOS pkg (`windows/OpenClawOneClick.iss`).
-
-Run **`npm run packaging:prepare-standalone`** (runs `next build` + copies `.next/static` and `public` into `.next/standalone`) for portable **`node server.js`**.
-
-## Tech Stack
-
-- **Next.js 16** (App Router) + **React 19** + TypeScript  
-- **Tailwind CSS v4**  
-- Primary data: filesystem + `openclaw.json` under `OPENCLAW_HOME`  
-- **Optional:** `mysql2` — sync/metrics APIs if MySQL is configured (`.env.example`)
-
-## Requirements
-
-- Node.js 18+
-- OpenClaw installed with config at `~/.openclaw/openclaw.json`
-
-## Configuration
-
-By default, the dashboard reads config from `~/.openclaw/openclaw.json`. That file must be **strict JSON** (OpenClaw uses `JSON.parse`): **no** `//` or `/* */` comments and **no** trailing commas. The dashboard’s save path uses `JSON.stringify` and never injects comments.
-
-To use a custom path:
-
-- **Option A**: Create `.env.local` in the project root (recommended):
-  ```env
-  OPENCLAW_HOME=C:/Users/YourUsername/.openclaw
-  ```
-  (Use forward slashes on Windows. See `.env.example`.)
-
-- **OpenClaw CLI path** (needed for **Save to config** / Gateway `config.patch` when your IDE’s `npm run dev` does not inherit npm global `PATH` on Windows): set `OPENCLAW_CLI` in `.env.local`, e.g. `C:/Users/You/AppData/Roaming/npm/openclaw.cmd`. See `.env.example`.
-
-- **Models JSON shape** (`models.providers`, merge with `agents/*/agent/models.json`, `agents.defaults.models` aliases): see **[docs/openclaw-models-config.md](docs/openclaw-models-config.md)** (no secrets; describes how the dashboard aligns writes with typical `openclaw.json`).
-
-- **Option B**: Set the environment variable when running:
-  ```bash
-  # Linux/macOS
-  OPENCLAW_HOME=/opt/openclaw npm run dev
-  # Windows PowerShell
-  $env:OPENCLAW_HOME="C:\Users\YourUsername\.openclaw"; npm run dev
-  ```
-
-### Model probe presets (internal gateways)
-
-To test with a JSON-defined **base URL + protocol + key** (same idea as an internal “chat debug” console) and your **model id**:
-
-1. Copy `model-probe-presets.example.json` to `model-probe-presets.json` in the **project root** or **`$OPENCLAW_HOME`**, or add a `modelProbePresets.presets` array in `openclaw.json`.
-2. On the **Models** page, pick a preset, then use **Test** on a row (or test inside **Add model**). Optional **temporary API key** overrides the preset key for that request only.
-
-Supported `protocol` values: `anthropic`, `openai`. (`gemini` is not supported for direct probe yet.)
-
-### Optional MySQL (sync & metrics)
-
-Optional **mirror** of OpenClaw config/agents/channels/sessions into MySQL (tables are created on sync: `oc_*`). Configure in `.env.local` (see `.env.example`): `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE` (default DB name `openclaw_visualization`).
-
-- `POST /api/storage/sync` — run sync  
-- `GET /api/storage/sync` — latest sync run status  
-- `GET /api/storage/metrics` — row counts / storage-oriented metrics  
-
-The rest of the dashboard does **not** depend on MySQL.
-
-## Docker Deployment
-
-The **Dockerfile** runs the Next **standalone** server with **`PORT=3000`** inside the container (unlike `npm run dev`, which uses **3003** on the host).
-
-### Build Docker Image
-
-```bash
-cd 软件SOFT/龙虾可视化控制面板   # or your checkout root containing this folder
-docker build -t openclaw-dashboard .
-```
-
-### Run Container
-
-```bash
-# Basic run (host 3000 -> container 3000)
-docker run -d -p 3000:3000 openclaw-dashboard
-
-# With custom OpenClaw config path
-docker run -d --name openclaw-dashboard -p 3000:3000 -e OPENCLAW_HOME=/opt/openclaw -v /path/to/openclaw:/opt/openclaw openclaw-dashboard
-```
+<div align="center">
+
+# 🦞 ONE CLAW 龙虾可视化控制台
+
+**本地优先的 OpenClaw 可视化工具箱** — 仪表盘 · 专家战队 · 像素工作室 · 模型探测 · 极简部署，全部对齐本机 `openclaw.json` 与 Gateway（[Next.js](https://nextjs.org/) + [OpenClaw](https://github.com/openclaw/openclaw)）。
+
+<p>
+  <strong>Language / 语言</strong><br />
+  <b>简体中文（本页）</b> · <a href="README.en.md">English → README.en.md</a>
+</p>
+
+<p>
+  <a href="#capabilities">核心能力</a>
+  &nbsp;·&nbsp;
+  <a href="#preview">界面预览</a>
+  &nbsp;·&nbsp;
+  <a href="#install-guide">安装说明</a>
+  &nbsp;·&nbsp;
+  <a href="#quick-start">快速开始</a>
+  &nbsp;·&nbsp;
+  <a href="#tech-stack">技术栈</a>
+  &nbsp;·&nbsp;
+  <a href="#ecosystem">相关生态</a>
+  &nbsp;·&nbsp;
+  <a href="#community">交流</a>
+</p>
+
+<img src="docs/bot_dashboard.png" alt="ONE CLAW 仪表盘：网关、趋势、专家任务" width="780" />
+
+</div>
 
 ---
 
-# OpenClaw Bot Dashboard（中文）
+> **不想先啃长文档？** **Windows** 可装 **NSIS `.exe`**（内嵌 Node，自动起 **3003**）；**Mac / Linux** 用 **Node 18+** 执行 `npm run dev` 或 **Docker**。完整能力依赖本机 **OpenClaw**；**「只装面板」** 与 **「OpenClaw + 龙虾一键流水线」** 两条路线见下文 **[安装说明](#install-guide)**。
 
-**1one 龙虾办公室** — 面向 [OpenClaw](https://github.com/openclaw/openclaw) 的 **本地优先一体化控制台**（[Next.js](https://nextjs.org/)）：不是单一页面，而是一套 **互相打通的工具矩阵**——仪表盘、模型实验台、极简安装、像素化「专家工作室」、会话与通道、告警与统计等，全部对齐你本机的 **`openclaw.json`、Agent 目录、会话文件与 Gateway**。
+### ✨ 为什么选这套控制台？
+
+| 🚀 亮点 | 说明 |
+|--------|------|
+| 🎯 **一站式运维** | 网关健康、Token/耗时趋势、告警、会话、专家战队同屏可达 |
+| 🖥️ **专家工作室** | 经典办公室 / 星际舰桥 / 蘑菇林地三套像素场景，热力图与摸鱼榜 |
+| 🤖 **模型实验台** | 谁在用什么模型、探测、内网预设、通过后写入 `openclaw.json` |
+| 🌍 **六语五主题** | 简繁英 + 马来 / 印尼 / 泰；五套全局皮肤持久化 |
+| 📦 **双轨安装** | **A** 独立龙虾面板（Win `.exe` / 源码 / Docker）· **B** [`openclaw-oneclick`](packaging/openclaw-oneclick/) 一键脚本与 Inno 骨架 |
+| 🔧 **CLI 友好** | 不替代官方终端；需要时照常使用 `openclaw` |
+
+<a id="ecosystem"></a>
+
+### 相关生态 · 同类优秀项目
+
+| 项目 | 说明 |
+|------|------|
+| **[OpenClaw](https://github.com/openclaw/openclaw)** | 官方智能体网关与 CLI |
+| **[OneClaw](https://github.com/oneclaw/oneclaw)** | 「一分钟装好」的 **桌面客户端**：内置 Gateway 与 Node，适合零命令行用户（与本仓库 **Web 控制台** 路线互补） |
+| **[OpenClaw-Admin](https://github.com/itq5/OpenClaw-Admin)** | 基于 **Vue 3** 的网关管理台，另一种可视化实现 |
+
+---
+
+<a id="capabilities"></a>
 
 ## 能力总览 — 这套系统里有什么
 
@@ -322,65 +129,141 @@ docker run -d --name openclaw-dashboard -p 3000:3000 -e OPENCLAW_HOME=/opt/openc
 
 后端接口位于 `app/api/`（如 `agent-activity`、`config`、`openclaw/*`、`pixel-office/*`、`storage/*`、`setup/onboard` 等）。
 
+<a id="preview"></a>
+
 ## 预览
 
-以下截图均来自本仓库 **[`docs/`](docs/)** 目录（与上方英文 **Preview** 对应）。**更新界面后请同步替换 `docs/` 内图片**，README 中路径均为相对路径 `docs/文件名`。
+以下截图均来自本仓库 **[`docs/`](docs/)** 目录。**更新界面后请同步替换 `docs/` 内图片**。英文版说明与对照见 **[README.en.md](README.en.md)**。说明文字已按当前截图内容微调；**`dashboard.png` 等文件名是历史遗留，画面实为「专家战队」栅格而非纯数字首页**。
 
-### 首页与仪表盘
-![机器人总览仪表盘](docs/bot_dashboard.png)
-![仪表盘主界面](docs/dashboard.png)
-![仪表盘宽屏预览](docs/dashboard-preview.jpg)
+### 仪表盘总览与专家战队
+**`bot_dashboard.png`** — **仪表盘**：版本与**网关**卡片、配置路径与端口、**全局 Token/耗时趋势**、渠道与会话类型分布、**最近同步**、**Agent 任务状态**；顶栏 **CLAW 诊断**、**重启 OneOneClaw**、**查看 CLAW 状态**。
 
-### 模型与会话
-![模型列表](docs/models-preview.png)
-![会话列表](docs/sessions-preview.png)
+**`dashboard.png` / `dashboard-preview.jpg`** — **专家战队**卡片墙：在线/空闲/离线、绑定**模型**、**飞书**等平台、会话/消息/Token、小趋势图；宽图常带 **会话预览** 浮层（群聊/私聊与 Token 提示）。
 
-### 像素办公室与三套游戏场景
-![像素办公室](docs/pixel-office.png)
-![游戏场景 · 经典办公室](docs/游戏场景-办公室.png)
-![游戏场景 · 星际舰桥](docs/游戏场景-星际剑桥.png)
-![游戏场景 · 蘑菇林地](docs/游戏场景-蘑菇林地.png)
+![OneOne 仪表盘 — 网关、趋势、分布、任务追踪](docs/bot_dashboard.png)
+![专家战队 — 多 Agent 卡片、模型与平台指标](docs/dashboard.png)
+![专家战队 — 宽屏布局与会话预览](docs/dashboard-preview.jpg)
 
-### 专家战队与专家文件管理
-![专家战队](docs/专家战队.png)
-![专家文件管理](docs/专家文件管理.png)
-![专家文件管理（备选截图）](docs/专家文件管理1.png)
+### 模型、会话与记忆管理
+**模型页** — **接入模型列表**：主模型/兜底、**各模型被哪些专家占用**、探测预设、临时 Key、**探测通过后写配置**、Provider 表格（如 LiteLLM）。**会话列表** — 按 Agent 查看 **主会话 / 飞书群私聊 / 定时任务**、上下文 **占用比例**、单条**测试**。**记忆管理** — **Markdown 归档** 与 **SQLite 实时** 双轨路径、在线编辑 **`MEMORY.md`** 并保存。
+
+![模型 — Provider、Agent 绑定、新增与探测](docs/models-preview.png)
+![会话 — Agent 维度、飞书/cron、上下文百分比](docs/会话列表.png)
+![记忆 — 双路径说明与 MEMORY 编辑器](docs/记忆管理.png)
+
+### 专家工作室（像素地图）与三套游戏场景
+**`pixel-office.png`** — **专家工作室**画布：俯视**像素场景**、**游戏场景**下拉（如**星际舰桥**）、专家**名牌**（工作中/摸鱼/下班等）、值班 SRE 等装饰。下列三图为 **经典办公室 / 星际舰桥 / 蘑菇林地** 三套美术与拓扑。
+
+![专家工作室 — 像素地图、场景切换、状态条](docs/pixel-office.png)
+![游戏场景 · 经典办公室（原版素材）](docs/游戏场景-办公室.png)
+![游戏场景 · 星际舰桥与星空背景](docs/游戏场景-星际剑桥.png)
+![游戏场景 · 蘑菇林地溪流可走格](docs/游戏场景-蘑菇林地.png)
+
+### 专家战队与专家文件合规
+**专家战队** — 多专家卡片、**手动刷新**档位、**我要聊天**、默认模型说明。**备选图** 含 **群聊卡片**、**Fallback 模型**、**Agent 任务监控**（定时任务成功/失败）。**专家文件管理** — 各 Agent 必备 Markdown 清单、**合规率**、缺失 **ROLE.md** 等标红、**一键补全并部署**。
+
+![专家战队 — 卡片墙与刷新策略](docs/专家战队.png)
+![专家战队 — 群聊绑定、兜底模型、定时任务](docs/专家战队2.png)
+![专家文件 — 清单合规与补全入口](docs/专家文件管理.png)
+![专家文件 — 备选合规视图](docs/专家文件管理1.png)
+
+### 专家战队聊天（浏览器内）
+选择 **专家 + 会话** → **连接会话**，可选 **极速模式**（轻量短回复）。气泡内可出现总指挥的**长文战报/项目同步**。**清空本地记录** 仅清除**浏览器本地**聊天记录，不等于 OpenClaw 侧历史。
+
+![专家战队聊天 — 会话就绪与回复流](docs/快速聊天对话.png)
+![专家战队聊天 — 长文状态同步示例](docs/快速聊天对话2.png)
+
+### Claw 诊断与运行状态（仪表盘入口）
+**CLAW 诊断** — 弹窗内为类终端的 **`openclaw doctor`** 输出：网关地址、**端口占用** 与 **PID**（如 `node.exe`）。**查看 CLAW 状态** — 类似 **`openclaw gateway status`** 日志、RPC/stderr 提示与 **官方排障链接**。
+
+![CLAW 诊断弹窗 — doctor、端口冲突](docs/claw诊断.png)
+![查看运行状态 — gateway 日志与 PID](docs/查看claw运行状态.png)
 
 ### 主题与多语言（五套主题 · 六种界面语言）
-![主题切换](docs/主题变化.png)
-![繁体中文界面](docs/繁体.png)
-![马来语界面](docs/马来语.png)
-![印尼语界面](docs/印尼语.png)
-![泰语界面](docs/泰语.png)
+侧栏 **语言** 与 **`data-theme`** 皮肤（如橙色暖调、极简暗黑）；下列为 **繁体中文** 与 **东南亚语言** 界面样例。
+
+![主题 — 暖色外壳与切换器](docs/主题变化.png)
+![界面 · 繁体中文](docs/繁体.png)
+![界面 · 马来语](docs/马来语.png)
+![界面 · 印尼语](docs/印尼语.png)
+![界面 · 泰语](docs/泰语.png)
 
 ### 告警、模型切换、统计、通道
-![告警中心](docs/告警中心.png)
-![模型切换](docs/模型切换.png)
-![消息统计](docs/消息统计.png)
-![通道管理](docs/通道管理.png)
+**告警中心** — 总开关、**接收告警的专家**列表、规则：**模型不可用**、**长时间无响应**、**消息失败率**、**定时任务连续失败**及静默时长。其余页：**切换模型**、**消息统计**图表、**通道管理**列表。
+
+![告警中心 — 规则与接收专家](docs/告警中心.png)
+![模型切换 — 单卡绑定/切换入口](docs/模型切换.png)
+![消息统计 — Token 与耗时趋势](docs/消息统计.png)
+![通道管理 — 通道绑定总览](docs/通道管理.png)
 
 ### 极简安装向导
-![极简安装总览](docs/极简的安装.png)
-![极简安装步骤 2](docs/极简安装2.png)
-![极简安装步骤 3](docs/极简安装3.png)
-![极简安装步骤 4](docs/极简安装4.png)
+**首屏** — 检测到 **CLI 版本**、五步路径说明（**提供商 → 密钥 → 确认 → Gateway**）、**密钥仅在本机** 提示。**极简安装2–4** 为后续步骤（选厂商、填 Key、确认摘要、完成与检查）。
+
+![极简安装 — CLI 预检与开始配置](docs/极简的安装.png)
+![极简安装 — 提供商与密钥步骤](docs/极简安装2.png)
+![极简安装 — 确认摘要](docs/极简安装3.png)
+![极简安装 — 完成与网关检查](docs/极简安装4.png)
 
 ### `docs/` 目录下的说明文档（非截图）
 - [DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md](docs/DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md) — Windows 打包与安装器交接说明  
 - [openclaw-models-config.md](docs/openclaw-models-config.md) — 模型与 `openclaw.json` 字段对齐说明  
 - [RECENT_OPTIMIZATIONS_2026-03-27.zh-CN.md](docs/RECENT_OPTIMIZATIONS_2026-03-27.zh-CN.md) — 近期稳定性与轮询 / OpenClaw 调用优化记录
 
+<a id="install-guide"></a>
+
+## 安装说明（两种路线，请先看清）
+
+下面两种都叫「安装」，但**不是同一件事**，请按你的场景选一行：
+
+| 路线 | 装的是什么 | 典型用户 |
+|------|------------|----------|
+| **A — 独立安装龙虾面板** | 只装 **Web 控制台**（本仓库 Next.js），默认访问 **http://localhost:3003**。**安装包本身不自带** OpenClaw CLI / 网关二进制（除非你另外做捆绑）。 | **只要可视化面板**；机器上 **已有** OpenClaw，或你会 **另外** 用官方方式装 OpenClaw。 |
+| **B — 一键安装包（OpenClaw + 龙虾面板）** | 按文档/脚本顺序：**装或检测 OpenClaw CLI** → **onboard** → **起网关** → **起龙虾 standalone** → 打开页面（可配合 Inno 等打成「一个安装器」）。 | **新机一条龙**，或你要 **一条固定流水线** 把 CLI 与面板一起交付。 |
+
+---
+
+### A — 独立安装龙虾面板（仅控制台）
+
+**「支持 Windows / Linux / macOS」** 在这里指：**龙虾面板这套 Next 应用能在该系统上跑起来**。完整能力（读 Agent、网关健康、`/setup` 写配置等）仍需要本机有合法的 **`OPENCLAW_HOME`**（含 **`openclaw.json`**）且通常需要 **OpenClaw 网关**在跑——OpenClaw 请 **单独安装**（官方脚本/包管理器），除非你走下面的 **路线 B**。
+
+| 系统 | 是否支持独立面板 | 本仓库提供的安装方式 |
+|------|------------------|----------------------|
+| **Windows** | **支持** | **最终用户（不必单独装 Node）：** 安装 NSIS 产物 **`ONE Claw … Setup ….exe`**（[`packaging/electron/build-electron.ps1`](packaging/electron/build-electron.ps1) 构建，输出 [`packaging/electron/dist/`](packaging/electron/)）。Electron 内嵌 Node，跑 standalone Next，端口 **3003**；说明见 [`packaging/electron/README.md`](packaging/electron/README.md)。**开发者：** 安装 **Node 18+**，克隆后 `npm install`、`npm run dev`。**绿色运行：** `npm run packaging:prepare-standalone` 后，在 `.next/standalone` 下用 `node server.js`（需与 dev 一致可设 **PORT=3003**）。 |
+| **macOS** | **支持** | 本仓库 **未** 提供现成 **`.dmg` / `.app`**（[`electron-builder.config.js`](packaging/electron/electron-builder.config.js) 当前仅 **Windows NSIS**）。请使用 **Node 18+** + 克隆 + `npm install` / `npm run dev`，或 **Docker**（见下文 **Docker 部署**）。若要 Mac 桌面包，需在 macOS 上为 electron-builder 增加 **`mac`** 目标自行构建。 |
+| **Linux（含 Ubuntu）** | **支持** | 与 macOS 相同：**Node 18+** + 源码（Ubuntu 建议 **nvm** / **NodeSource**，勿依赖过旧的 `apt nodejs`）或 **Docker**。本仓库 **不** 默认产出 **AppImage / .deb**；需要时请增加 **`linux`** 目标自行打包。 |
+
+**面板起来之后：** 浏览器打开 **http://localhost:3003**。若尚未安装 OpenClaw，请先按 **官方文档** 安装 CLI，或在面板已启动时使用 **`/setup`**（预检会提示剩余步骤）。配置目录非默认时，在项目根 **`.env.local`** 设置 **`OPENCLAW_HOME`**（见 **自定义配置路径**）。
+
+---
+
+### B — 一键安装包（OpenClaw + 龙虾面板）
+
+这与「只装龙虾 `.exe`」**不是同一条路线**。实现与说明在 **[`packaging/openclaw-oneclick/`](packaging/openclaw-oneclick/)**，核心顺序是：
+
+1. **冲突预检**：已安装 `openclaw` 可跳过重复安装；可选检测 **网关端口（默认 18789）**、**龙虾 3003**（详见该目录 README）。  
+2. **安装 OpenClaw**：封装调用官方 **`install.sh` / `install.ps1`**。  
+3. **初始化**：浏览器 **`http://localhost:3003/setup`**，或 **`wizard.env` + `run-onboard-from-env`** 执行 **`openclaw onboard --non-interactive`**。  
+4. **启动龙虾**：需先在本仓库执行 **`npm run packaging:prepare-standalone`** 生成 standalone，再用 **`start-lobster-standalone`**.ps1 / .sh。  
+5. **自动开页**：**`wait-gateway-open-dashboards`**.ps1 / .sh 等（见脚本说明）。
+
+| 系统 | 用户/集成商应先读 |
+|------|-------------------|
+| **Windows** | **[`WINDOWS_USER_JOURNEY.zh-CN.md`](packaging/openclaw-oneclick/WINDOWS_USER_JOURNEY.zh-CN.md)**（传统 EXE 向导 vs 先起 3003 再走 `/setup`）；维护者另见 **[`packaging/openclaw-oneclick/README.md`](packaging/openclaw-oneclick/README.md)**、**[`docs/DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md`](docs/DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md)**。 |
+| **macOS / Linux** | 同上 README 中的 **`install-openclaw-macos-linux.sh`**、**`start-lobster-standalone.sh`**、**`wait-gateway-open-dashboards.sh`** 等。 |
+
+**范围说明：**「双击一个 DMG/EXE 就包含便携 Node + CLI + 龙虾」的**成品安装器**需要你在 **CI/签名环境** 用 Inno、pkg、create-dmg 等整合；本仓库提供 **脚本与 ISS 骨架**，详见 openclaw-oneclick README 中关于 **DMG/EXE** 的段落。
+
+---
+
+<a id="quick-start"></a>
+
 ## 快速开始
 
-### 最快上手（三选一）
+### 对照「安装说明」怎么选？
 
-1. **Windows 安装包（最终用户，不必单独装 Node）** — 双击 **`ONE Claw … Setup ….exe`**（你方发布的安装包；或在仓库里执行 [`packaging/electron/build-electron.ps1`](packaging/electron/build-electron.ps1)，产物在 [`packaging/electron/dist/`](packaging/electron/)）。安装完成后会自动启动内嵌的 **3003** 服务并在浏览器打开 **部署向导（`/setup`）**。原理与构建说明：[`packaging/electron/README.md`](packaging/electron/README.md)。
-2. **源码 / 开发者** — 克隆本仓库（或只拷贝本目录）→ `npm install` → `npm run dev` → 浏览器打开 **http://localhost:3003**（具体命令见下一段）。若 OpenClaw 配置不在 `~/.openclaw`，在项目根 **`OPENCLAW_HOME`** 写到 `.env.local`（见下文 **自定义配置路径**）。
-3. **只缺 OpenClaw 初始化** — 面板已经在跑时，直接访问 **http://localhost:3003/setup**，按向导完成 CLI 预检与厂商/Key。
-
-**安装顺序、先起 3003 再走网页向导**等场景说明：**[`packaging/openclaw-oneclick/WINDOWS_USER_JOURNEY.zh-CN.md`](packaging/openclaw-oneclick/WINDOWS_USER_JOURNEY.zh-CN.md)**。
-
-**macOS / Linux（如 Ubuntu）：**请用上面 **「源码 / 开发者」** 或下文 **Docker**。Linux 上先装好 **Node.js 18+**（Ubuntu 自带 `apt` 的 `nodejs` 版本常偏旧，建议 **`nvm`** 或 **NodeSource** 装新 LTS），再在项目目录执行 `npm install`、`npm run dev`，浏览器访问 **http://localhost:3003**。**`.exe` 仅 Windows**。当前 [`electron-builder.config.js`](packaging/electron/electron-builder.config.js) 只有 **Windows NSIS**，**没有**现成的 **`.dmg`（Mac）** 或 **AppImage / `.deb`（Linux）** 安装包；需要桌面包时要自己在对应系统上加 electron-builder 的 `mac` / `linux` 目标并构建。
+- **只要面板、Windows、不想装 Node：** → **路线 A** → 龙虾 **`.exe`**。  
+- **只要面板、Mac / Linux：** → **路线 A** → **Node + npm** 或 **Docker**。  
+- **从零装 CLI + 面板：** → **路线 B** → **`packaging/openclaw-oneclick/`**（Windows 务必读 **`WINDOWS_USER_JOURNEY`**）。
 
 更多方式（提示词 / Skill 等）见：[快速启动文档](quick_start.md)。
 
@@ -402,11 +285,9 @@ npm run dev
 
 其它命令：`npm run build`（构建）、`npm run start`（生产模式，端口 3003）、`npm run generate-pixel-assets`（像素资源）、`npm run i18n:merge-sea`（维护者合并东南亚语言分包）。
 
-### 一键安装包（OpenClaw + 龙虾面板）
+**路线 B / 维护者：** 一键包流程、环境变量与 Inno 说明见 **[`packaging/openclaw-oneclick/README.md`](packaging/openclaw-oneclick/README.md)**。同类桌面体验可参考社区 **[OneClaw](https://github.com/oneclaw/oneclaw)**。
 
-实验性方案见 **[`packaging/openclaw-oneclick/`](packaging/openclaw-oneclick/)**：官方**静默**安装脚本前会 **检测是否已有 `openclaw`（有则跳过安装避免覆盖）**，并检测 **网关端口 / 龙虾 3003 占用**；`wizard.env` 驱动 **`openclaw onboard --non-interactive`**；网关就绪后打开 **OpenClaw 网页**与 **`http://localhost:3003/oneone-dashboard`**。同类体验可参考社区桌面端 **[OneClaw](https://github.com/oneclaw/oneclaw)**。完整 **DMG/EXE** 需自行打入 **Node 22** 并用 Inno / macOS 安装器打包。
-
-执行 **`npm run packaging:prepare-standalone`**（`next build` + 将 `.next/static` 与 `public` 拷入 `.next/standalone`），便于单独用 `node server.js` 启动龙虾面板。
+<a id="tech-stack"></a>
 
 ## 技术栈
 
@@ -417,8 +298,9 @@ npm run dev
 
 ## 环境要求
 
-- Node.js 18+
-- 已安装 OpenClaw，配置文件位于 `~/.openclaw/openclaw.json`
+- **路线 A（源码跑）：** Node.js **18+**。  
+- **路线 A（Windows `.exe`）：** 不要求用户单独安装 Node（运行时打在 Electron 内）。  
+- **OpenClaw：** 完整功能需要本机已部署 OpenClaw（CLI + 通常需网关）；配置树通过 **`OPENCLAW_HOME`** 指向含 **`openclaw.json`** 的目录（默认 Unix 为 `~/.openclaw`，Windows 为 `%USERPROFILE%\.openclaw`）。
 
 ## 自定义配置路径
 
@@ -467,7 +349,20 @@ npm run dev
 
 与本地 `npm run dev`（**3003**）不同，**Dockerfile** 内进程使用 **`PORT=3000`**，映射端口时请使用 `-p 3000:3000`（或自行改 Dockerfile / 环境变量）。
 
+<a id="community"></a>
+
+## 交流与社群
+
+使用问题、安装排错、功能建议或合作交流，可扫码加入 **飞书群** 或添加 **微信**（二维码图片在仓库 [`docs/`](docs/) 目录，更新后请同步替换文件）。
+
+| 飞书群 | 微信 |
+|--------|------|
+| ![飞书群二维码，扫码加入交流群](docs/飞书群.png) | ![微信二维码，扫码添加作者](docs/微信.png) |
+
+也可在 GitHub 提 Issue / 私信作者。
+
 ## 作者联系方式（contact）
 GitHub：[gaogg521](https://github.com/gaogg521)
 
 感谢初始代码作者 [xmanrui](https://github.com/xmanrui)。
+

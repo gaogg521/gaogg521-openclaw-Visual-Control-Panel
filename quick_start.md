@@ -1,5 +1,7 @@
 # 快速启动办法（中文）
 
+**文档语言：** 主说明为 **[README.md](README.md)**（简体中文）。完整英文版（安装手册、Preview、API 说明等）见 **[README.en.md](README.en.md)**。
+
 ## 0. 指定 OpenClaw 目录（可选）
 
 若 OpenClaw 不在默认的 `~/.openclaw`，在**本项目根目录**（`龙虾可视化控制面板` 文件夹）创建 `.env.local`，写入：
@@ -27,7 +29,7 @@ OPENCLAW_HOME=C:/Users/你的用户名/.openclaw
 - **主题**：侧栏与首页共用 **五套皮肤**（深浅 + 科技蓝 + 暖橙 + 森绿），不仅是「深色/浅色」两种。
 - **极简部署**：装好 `openclaw` 后，在浏览器打开 **`http://localhost:3003/setup`**，按三步向导填写厂商与 API Key（无需手改 env 文件）。
 
-更完整的功能说明见根目录 **[README.md](README.md)**。
+更完整的功能说明见根目录 **[README.md](README.md)**；英文读者请用 **[README.en.md](README.en.md)**。
 
 ## 3. 通过 Prompt 安装
 
