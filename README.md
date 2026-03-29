@@ -27,7 +27,7 @@
 
 ---
 
-> **不想先啃长文档？** **只装面板** 三系统一致：**Windows** 可装 **NSIS `.exe`**；**macOS** 可在本机打 **`.dmg` / `.zip`**；**Linux** 可打 **AppImage**（均为 Electron、内嵌 Node、默认 **3003**，与源码跑同一套 `main.js`）。也可不装桌面包，直接用 **Node 18+**（`npm run dev` / `npm run start`）或 **Docker**。完整能力仍依赖本机 **OpenClaw**；与 **「OpenClaw + 龙虾一键流水线」** 的差别见 **[安装说明](#install-guide)**。
+> **不想先啃长文档？** **只装面板** 即可：**Windows / macOS / Linux** 桌面包启动后**一律默认进控制台**，不强制装 OpenClaw、也不自动跳 **`/setup`**（需要向导时在托盘选「初始化向导」或浏览器打开 **`/setup`**）。亦可 **Node**（`npm run dev` / `npm run start`）或 **Docker**。与 **「OpenClaw + 龙虾一键流水线」** 的差别见 **[安装说明](#install-guide)**。
 
 ### ✨ 为什么选这套控制台？
 
@@ -278,76 +278,91 @@
 
 ## 安装说明
 
-两条都叫「安装」，但**装的不是同一套东西**。建议顺序：**① 看对照表 → ② 看「我该选哪条」→ ③ 只展开你选中的路线小节**。
+先在下表选 **路线**，再按对应 **系统** 执行命令。说明文字较多处使用小号字体以便扫读。
 
-### 路线对照（先选 A 还是 B）
+### 选路线（A / B）
 
-| | **路线 A — 只要龙虾面板** | **路线 B — OpenClaw + 面板一条龙** |
-|--|--|--|
-| **你得到什么** | 本仓库的 **Web 控制台**（默认 **http://localhost:3003**） | **脚本 / 安装器流程**：检测或安装 CLI → **onboard** → 起网关 → 再起 standalone 面板 |
-| **是否自带 OpenClaw** | **否**（需本机另有 OpenClaw，或起面板后按 **`/setup`** 引导） | **按文档执行**：流程里会装或复用 **openclaw** |
-| **典型场景** | 已有 OpenClaw；或 **自己** 用官方方式装 CLI | **新环境**、**集成商** 要一条固定顺序交付 **CLI + 面板** |
+| 路线 | 你装的是什么 | 何时选 |
+|------|-------------|--------|
+| **A — 只要龙虾面板** | 本仓库 **Web 控制台**（默认 **http://localhost:3003**） | 只装面板；或已有 OpenClaw、自己管网关 |
+| **B — CLI + 面板一条龙** | **[`packaging/openclaw-oneclick/`](packaging/openclaw-oneclick/)** 脚本：装/检测 CLI → onboard → 网关 → standalone 面板 | 新机从零交付、集成商固定流水线 |
 
-**易混点：** **路线 A** 的 **桌面包**（Win **`.exe`** / Mac **`.dmg`**·`.zip` / Linux **AppImage**）都是 **只装面板**、同一套 Electron 行为。**路线 B** = **CLI 与面板按脚本串起来**，和「只装上述桌面包」**不是同一条路**。
-
-### 我该选哪条？
-
-1. 机器上 **已有** `openclaw` 与配置，只要自己管网关 → **路线 A**。  
-2. **只要面板（任意系统）：** **路线 A**。可选 **① 桌面包**（与 Windows 同等：Electron 内嵌 Node、托盘、浏览器开 **`/setup`**）：在 **对应系统上** 于项目根执行 **`npm run electron:dist`**（或 `packaging/electron/build-electron.js` / `.sh`），产出 **Windows `.exe` / macOS `.dmg`·`.zip` / Linux AppImage**；**② 源码跑**：**Node 18+** 的 `npm run dev` / `npm run start`；**③ Docker**。  
-3. **从零搭一套**，愿意按 **`packaging/openclaw-oneclick/`** 里的顺序走 → **路线 B**。
+<small>**易混：** 路线 **A** 的桌面包（`.exe` / `.dmg` / AppImage）都是「只装面板」；**三系统**首次浏览器均默认**控制台首页**（`packaging/electron/main.js`）。路线 **B** 与「只装桌面包」不是同一条路。</small>
 
 ---
 
-### 路线 A — 独立安装龙虾面板
+### 前置（三系统相同）
 
-**三系统均支持「只装面板」：** 同一套 Next 应用 + 同一套 Electron **`main.js`**（托盘、**`utilityProcess`** 起 standalone、浏览器默认打开 **`/setup`**），默认端口 **3003**。安装形态可选：**桌面包**（内嵌 Node，用户不必单独装 Node）或 **本机 Node / Docker**。
+- **Node.js 18+**；在 monorepo 中进入 **`软件SOFT/龙虾可视化控制面板`** 后执行一次 `npm install`。
+- 克隆示例：
 
-**重要（原生模块）：** 项目依赖 **better-sqlite3** 等原生绑定。**打桌面包或生产 standalone 时，必须在目标操作系统上执行 `npm run build`**（直接跑 `npm run electron:dist` 会在本机先 build）。勿把在 Windows 上构建的 `.next/standalone` 复制到 Mac/Linux 再打包，否则运行时会加载错平台的 `.node`。
+```bash
+git clone https://github.com/gaogg521/Openclaw-SKILLS-OneOne-.git
+cd Openclaw-SKILLS-OneOne-/软件SOFT/龙虾可视化控制面板
+npm install
+```
 
-读 Agent、网关健康、`/setup` 写配置等，仍需要合法的 **`OPENCLAW_HOME`**（含 **`openclaw.json`**）且通常需要 **网关**；若还没有，请 **单独安装** 官方 OpenClaw，或先起面板再跟 **`/setup`** 与官方文档补齐。
-
-#### Windows
-
-| 角色 | 做法 |
-|------|------|
-| **最终用户（不必单独装 Node）** | 在 **Windows** 上构建安装包：项目根 **`npm run electron:dist`**，或 [`packaging/electron/build-electron.ps1`](packaging/electron/build-electron.ps1) / [`build-electron.js`](packaging/electron/build-electron.js)。产物 **NSIS `.exe`** 在 [`packaging/electron/dist/`](packaging/electron/dist/)（历史版本可归档在 `dist/releases/`）。说明见 [`packaging/electron/README.md`](packaging/electron/README.md)。 |
-| **开发者** | **Node 18+** → `npm install` → `npm run dev`。 |
-| **本机生产 / 绿色部署** | `npm run build` 后 **`npm run start`**（或 `npm run packaging:prepare-standalone`；与 `.next/standalone` 下 **`node server.js`** 且 **PORT=3003** 一致）。 |
-
-#### macOS
-
-**支持。** **桌面包：** 在 **macOS 本机** 项目根执行 **`npm run electron:dist`**（或 `cd packaging/electron && ./build-electron.sh`），[`electron-builder.config.js`](packaging/electron/electron-builder.config.js) 会产出 **`.dmg` 与 `.zip`**（x64 / arm64）。行为与 Windows 安装版一致（内嵌 Node、托盘、浏览器 **`/setup`**）。未签名应用首次打开可能需在「隐私与安全性」中放行或使用右键打开。可选在 `packaging/electron/build/` 放置 **`icon.icns`** 或 **`icon.png`**（512×512 级）作为应用与托盘图标。  
-**不用桌面包：** `npm run dev` / `npm run start`，或 **Docker 部署**。
-
-#### Linux（含 Ubuntu）
-
-**支持。** **桌面包：** 在 **Linux 本机** 项目根 **`npm run electron:dist`**（或 `packaging/electron/build-electron.sh`），默认产出 **AppImage**（[`electron-builder.config.js`](packaging/electron/electron-builder.config.js)）。行为同样与 Windows 一致。建议 **nvm** / **NodeSource** 安装 **Node 18+**（勿用过旧的 `apt nodejs`）。可选 `packaging/electron/build/icon.png` 作为图标。  
-**不用桌面包：** 与 macOS 相同，**Node** 或 **Docker**。
-
-**面板起来之后：** 浏览器打开 **http://localhost:3003**。配置目录非默认时，在项目根 **`.env.local`** 设置 **`OPENCLAW_HOME`**（见 **自定义配置路径**）。
+<small>若只下载了本文件夹，直接进入该目录 `npm install` 即可。仅浏览面板 UI **不必**装 OpenClaw；读 Agent、网关、经 **`/setup`** 写 CLI 配置等再配 **`OPENCLAW_HOME`** 与网关。Docker 部署见下文 **Docker** 小节。</small>
 
 ---
 
-### 路线 B — 一键流水线（OpenClaw + 龙虾面板）
+### 路线 A · 开发环境 / 正式环境（Node，三系统命令一致）
 
-**目录：** **[`packaging/openclaw-oneclick/`](packaging/openclaw-oneclick/)**。
+以下命令均在**项目根目录**执行。默认端口 **3003**。
 
-**流程概要：**
+| 系统 | 终端 | 开发环境 | 正式环境 |
+|------|------|----------|----------|
+| **Windows** | PowerShell / CMD | `npm run dev` | `npm run build`<br>然后 `npm run start` |
+| **macOS** | 终端 | 同上 | 同上 |
+| **Linux** | Bash 等 | 同上 | 同上 |
 
-1. **冲突预检** — 已安装 `openclaw` 可跳过重复安装；可选检测网关端口（默认 **18789**）、龙虾 **3003**（详见该目录 README）。  
-2. **安装 OpenClaw** — 封装调用官方 **`install.sh` / `install.ps1`**。  
-3. **初始化** — 浏览器 **`http://localhost:3003/setup`**，或 **`wizard.env` + `run-onboard-from-env`** → **`openclaw onboard --non-interactive`**。  
-4. **启动龙虾** — 先在本仓库 **`npm run packaging:prepare-standalone`**，再用 **`start-lobster-standalone`**.ps1 / .sh。  
-5. **自动开页** — **`wait-gateway-open-dashboards`**.ps1 / .sh 等（见脚本说明）。
+<small>**开发：** `next dev` + 热更新；启动前会检测 **3003** 占用。**正式：** 使用 **`output: "standalone"`**，**不要**用 `next start -p 3003`；改代码后需再 `build`。仅停服务再开、代码未变时 **不必**每次 `start` 前都 `build`。Ubuntu 等建议 **nvm** / **NodeSource**，勿依赖过旧 `apt nodejs`。</small>
 
-**按系统先读：**
+---
 
-| 系统 | 文档 |
+### 路线 A · 桌面包（Electron，最终用户可不装 Node）
+
+**必须在目标系统上构建**（含 `npm run build`，**better-sqlite3** 为原生模块；勿把 Windows 打的 `.next/standalone` 拷到 Mac/Linux 再打包）。
+
+| 系统 | 终端 | 构建命令（项目根） | 说明 |
+|------|------|-------------------|------|
+| **Windows** | PowerShell | `npm run electron:dist`<br>或 `packaging\electron\build-electron.ps1` | <small>产物 **NSIS `.exe`** → [`packaging/electron/dist/`](packaging/electron/dist/)。详 [packaging/electron/README.md](packaging/electron/README.md)。</small> |
+| **macOS** | 终端 | `npm run electron:dist`<br>或 `packaging/electron/build-electron.sh` | <small>**`.dmg` / `.zip`**（多架构）。未签名应用可能需在系统设置放行。可选 `build/icon.icns` 或 `icon.png`。</small> |
+| **Linux** | Bash | `npm run electron:dist`<br>或 `packaging/electron/build-electron.sh` | <small>默认 **AppImage**。运行 AppImage 部分环境需 FUSE。可选 `build/icon.png`。</small> |
+
+<small>已有最新 standalone 时可 `npm run electron:dist:skip-next`。托盘内仍可手动打开 **「初始化向导 (/setup)」**。</small>
+
+---
+
+### 常用命令一览（路线 A · Node）
+
+| 命令 | 作用 |
 |------|------|
-| **Windows** | **[`WINDOWS_USER_JOURNEY.zh-CN.md`](packaging/openclaw-oneclick/WINDOWS_USER_JOURNEY.zh-CN.md)**（传统 EXE 向导 vs 先起 3003 再走 `/setup`）；维护者另见 **[`packaging/openclaw-oneclick/README.md`](packaging/openclaw-oneclick/README.md)**、**[`docs/DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md`](docs/DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md)**。 |
-| **macOS / Linux** | 同上 README：**`install-openclaw-macos-linux.sh`**、**`start-lobster-standalone.sh`**、**`wait-gateway-open-dashboards.sh`** 等。 |
+| `npm run dev` | 开发服务（3003） |
+| `npm run build` | 生产构建并同步 standalone 资源 |
+| `npm run start` | 启动 standalone 生产服务 |
+| `npm run stop` | 结束占用 **3003** 的进程 |
+| `npm run restart` | 先停再起生产（**不**自动 `build`） |
+| `npm run generate-pixel-assets` | 维护：像素资源 |
+| `npm run i18n:merge-sea` | 维护：合并东南亚语言分包 |
 
-**范围说明：**「双击一个安装器就内置便携 Node + CLI + 龙虾」的**成品**需在 **CI / 签名环境** 用 Inno、pkg、create-dmg 等整合；本仓库提供 **脚本与 ISS 骨架**，详见 openclaw-oneclick README 中 **DMG/EXE** 相关段落。
+---
+
+### 浏览器与安全（补充）
+
+<small>优先 **`http://localhost:3003`** 或 **`http://127.0.0.1:3003`**。若用局域网 IP 访问，敏感接口会校验 Host，需在 **`.env.local`** 设 **`CONFIG_ALLOW_LAN=1`**（见 **`.env.example`**）。**勿**随意 **`SETUP_ALLOW_REMOTE=1`** 暴露公网。非默认配置目录见下文 **自定义配置路径**。</small>
+
+---
+
+### 路线 B · 一键流水线（OpenClaw + 面板）
+
+| 系统 | 终端 | 入口 / 脚本 | 说明 |
+|------|------|-------------|------|
+| **Windows** | PowerShell | [WINDOWS_USER_JOURNEY.zh-CN.md](packaging/openclaw-oneclick/WINDOWS_USER_JOURNEY.zh-CN.md) | <small>用户旅程与维护者说明；另 [openclaw-oneclick/README.md](packaging/openclaw-oneclick/README.md)、[DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md](docs/DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md)。流程含预检、官方 `install.ps1`、`npm run packaging:prepare-standalone`、`start-lobster-standalone.ps1` 等。</small> |
+| **macOS** | 终端 | `packaging/openclaw-oneclick/` 内 **`.sh`** | <small>如 **`install-openclaw-macos-linux.sh`**、**`start-lobster-standalone.sh`**、**`wait-gateway-open-dashboards.sh`**，顺序见该目录 README。</small> |
+| **Linux** | Bash | 同上 | <small>与 macOS 相同脚本；「便携 Node + CLI + 龙虾」单安装器成品需在 CI/签名环境用 Inno、pkg 等整合，仓库提供脚本与 ISS 骨架。</small> |
+
+**路线 B / 维护者：** 环境变量与 Inno 详见 **[`packaging/openclaw-oneclick/README.md`](packaging/openclaw-oneclick/README.md)**。同类桌面体验可参考 **[OneClaw](https://github.com/oneclaw/oneclaw)**。
 
 ---
 
@@ -355,35 +370,7 @@
 
 ## 快速开始
 
-**还没选定路线时，请先读 [安装说明](#install-guide)。** 选定后的速查：**只要面板** → 路线 A（三系统均可 **`npm run electron:dist`** 打桌面包，或 **Node** / **Docker** 直接跑）；**从零装 CLI + 面板** → 路线 B 的 **`packaging/openclaw-oneclick/`**（Windows 务必读 **`WINDOWS_USER_JOURNEY`**）。
-
-更多方式（提示词 / Skill 等）见：[快速启动文档](quick_start.md)。
-
-本应用在 monorepo 中的路径为 **`软件SOFT/龙虾可视化控制面板`**。克隆 [Openclaw-SKILLS-OneOne-](https://github.com/gaogg521/Openclaw-SKILLS-OneOne-.git) 后：
-
-```bash
-git clone https://github.com/gaogg521/Openclaw-SKILLS-OneOne-.git
-cd Openclaw-SKILLS-OneOne-/软件SOFT/龙虾可视化控制面板
-
-npm install
-npm run dev
-```
-
-若你**只下载了本文件夹**，则直接进入该目录执行 `npm install` 与 `npm run dev` 即可。
-
-- **默认端口 `3003`**（见 `package.json`）。
-- **`npm run dev`（日常开发）** — 执行 **`next dev`**，带热更新；启动前会跑 **`scripts/check-dev-port.mjs`**，若 **3003** 已被占用则直接退出。
-- **`npm run start`（生产模式）** — 本仓库 **`next.config`** 使用 **`output: "standalone"`**，**不要**单独使用 `next start -p 3003`（与 standalone 不匹配）。正确流程：
-  1. **首次或改代码后**执行 **`npm run build`**（已包含将 `static` / `public` 同步进 **`.next/standalone`**）；
-  2. 再执行 **`npm run start`**（实际由 **`scripts/start-prod.mjs`** 启动 **`.next/standalone/server.js`**，默认 **`PORT=3003`**、**`HOSTNAME=0.0.0.0`**）。
-  - **仅停服务再开、代码未变**时，**不必**每次 `start` 前都 `build`。
-- **`npm run stop`** — 结束占用 **3003** 的监听进程（`scripts/kill-port.mjs`）。
-- **`npm run restart`** — **固定**先释放 **3003**，再以 **`PORT=3003`** 拉起生产服务（**`scripts/restart-prod.mjs`**）；**不会**自动执行 `build`，需已构建过。
-- **浏览器访问：** 请优先使用 **`http://localhost:3003`** 或 **`http://127.0.0.1:3003`**。若用 **`http://192.168.x.x:3003`** 等局域网地址打开，敏感接口（如 **`/api/config`**）会校验 Host；需在项目根 **`.env.local`** 设置 **`CONFIG_ALLOW_LAN=1`**（见 **`.env.example`**）。**公网暴露**勿随意开启 **`SETUP_ALLOW_REMOTE=1`**。
-
-其它命令：`npm run generate-pixel-assets`（像素资源）、`npm run i18n:merge-sea`（维护者合并东南亚语言分包）。更细的端口与重启说明见 **[quick_start.md](quick_start.md)**。
-
-**路线 B / 维护者：** 一键包流程、环境变量与 Inno 说明见 **[`packaging/openclaw-oneclick/README.md`](packaging/openclaw-oneclick/README.md)**。同类桌面体验可参考社区 **[OneClaw](https://github.com/oneclaw/oneclaw)**。
+与安装、端口、重启相关的命令已集中在上方 **[安装说明](#install-guide)** 表格。提示词、Skill、Git 工作流等见 **[quick_start.md](quick_start.md)**。
 
 <a id="tech-stack"></a>
 
@@ -396,9 +383,11 @@ npm run dev
 
 ## 环境要求
 
-- **路线 A（源码跑）：** Node.js **18+**。  
-- **路线 A（Windows `.exe`）：** 不要求用户单独安装 Node（运行时打在 Electron 内）。  
-- **OpenClaw：** 完整功能需要本机已部署 OpenClaw（CLI + 通常需网关）；配置树通过 **`OPENCLAW_HOME`** 指向含 **`openclaw.json`** 的目录（默认 Unix 为 `~/.openclaw`，Windows 为 `%USERPROFILE%\.openclaw`）。
+<small>安装命令与路线对照见上文 **[安装说明](#install-guide)**。</small>
+
+- **路线 A（Node）：** Node.js **18+**。  
+- **路线 A（桌面包）：** 最终用户**不必**单独装 Node（Electron 内嵌）。  
+- **OpenClaw：** 深度联动（网关、Agent、配置写入）需本机 CLI + 通常需网关；**`OPENCLAW_HOME`** 指向含 **`openclaw.json`** 的目录（Unix 默认 `~/.openclaw`，Windows `%USERPROFILE%\.openclaw`）。
 
 ## 自定义配置路径
 

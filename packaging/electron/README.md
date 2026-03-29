@@ -6,12 +6,12 @@
 Electron (主进程)
   └─ utilityProcess.fork(standalone/server.js)   ← Node.js 进程，运行 Next.js HTTP 服务
         │  port 3003
-        └─ BrowserWindow.loadURL("http://127.0.0.1:3003/setup")
+        └─ shell.openExternal → 三系统默认站点根（仪表盘）；--open-setup 可打开 /setup
 ```
 
 - **无需用户单独安装 Node.js** —— Electron 自带 Node.js 运行时，通过 `utilityProcess` 直接跑 Next.js standalone。  
 - **无 PowerShell 依赖** —— 完全绕过旧方案的 `.cmd → .ps1 → Start-Process` 链，消除执行策略失败风险。  
-- **一键 NSIS 安装** —— 与 LobsterAI / WorkBuddy 相同打包方式，用户级安装无需管理员。
+- **Windows：NSIS 安装** —— 用户级安装；**macOS / Linux**：dmg / AppImage 等；启动后默认页按 `main.js` 区分平台（见上）。
 
 ## 目录结构
 

@@ -14,9 +14,9 @@ const iconLinux = exists('icon.png') ? 'build/icon.png' : undefined;
 
 /**
  * electron-builder 配置 — ONE Claw 龙虾可视化控制台
- * - Windows：多步 NSIS（参考 WorkBuddy）
- * - macOS：dmg + zip（须在 macOS 上构建）；安装后行为与 Windows 一致（托盘 + 浏览器）
- * - Linux：AppImage（须在 Linux 上构建）
+ * - Windows：多步 NSIS（参考 WorkBuddy）；托盘 + 浏览器默认进控制台（与 Unix 一致）
+ * - macOS：dmg + zip（须在 macOS 上构建）；同上
+ * - Linux：AppImage（须在 Linux 上构建）；同上
  */
 module.exports = {
   appId:         'com.openclaw.lobster.dashboard',
@@ -112,7 +112,7 @@ module.exports = {
     // ---- 许可协议页 ----
     license:          'build/license.txt',
 
-    // ---- 安装完成后：选中「立即运行」启动 Electron（Electron 内部会打开浏览器） ----
+    // ---- 安装完成后：选中「立即运行」启动 Electron（浏览器默认进控制台首页） ----
     runAfterFinish:   true,
 
     // ---- 自定义 NSIS 脚本片段：向安装界面添加中文提示 ----

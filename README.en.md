@@ -249,108 +249,97 @@ Each block below pairs **short copy with a screenshot** so you can map UI to the
 
 ## Installation
 
-Both are called “install”, but they **install different stacks**. Suggested reading order: **① comparison table → ② “Which track?” → ③ only the subsection you need**.
+Pick a **track** first, then run the commands for your **OS**. Longer notes use `<small>` for easier scanning.
 
-### Track comparison (A vs B)
+### Pick a track (A / B)
 
-| | **Track A — Lobster panel only** | **Track B — OpenClaw + panel pipeline** |
-|--|--|--|
-| **What you get** | This repo’s **web console** (default **http://localhost:3003**) | **Scripts / installer flow**: detect or install CLI → **onboard** → start Gateway → start standalone panel |
-| **Includes OpenClaw?** | **No** (you need OpenClaw on the machine, or follow **`/setup`** after the UI is up) | **Yes, when you run the docs**: the flow installs or reuses **openclaw** |
-| **Typical use** | OpenClaw already there; or you install the CLI **yourself** | **Greenfield** or integrators who want **one ordered delivery** for **CLI + panel** |
+| Track | What you install | When to use it |
+|-------|------------------|----------------|
+| **A — Panel only** | This repo’s **web UI** (default **http://localhost:3003**) | Panel only; or you already have OpenClaw |
+| **B — CLI + panel pipeline** | **[`packaging/openclaw-oneclick/`](packaging/openclaw-oneclick/)** scripts: install/detect CLI → onboard → Gateway → standalone panel | Greenfield / integrator delivery |
 
-**Common confusion:** Track **A** **desktop bundles** (Windows **`.exe`**, macOS **`.dmg` / `.zip`**, Linux **AppImage**) are all **panel only** with the same Electron behavior. Track **B** **wires CLI + panel** — not the same as installing only those bundles.
-
-### Which track?
-
-1. You **already** have `openclaw` and config and you manage the Gateway → **Track A**.  
-2. **Panel only (any OS):** **Track A**. Choose **① Desktop bundle** (same as Windows: Electron + embedded Node, tray, browser **`/setup`**): on the **target OS** run **`npm run electron:dist`** from the repo root (or `packaging/electron/build-electron.js` / **`build-electron.sh`**), producing **Windows `.exe`**, **macOS `.dmg` / `.zip`**, or **Linux AppImage**; **② From source:** **Node 18+** `npm run dev` / `npm run start`; **③ Docker**.  
-3. **Greenfield** and you will follow **`packaging/openclaw-oneclick/`** end-to-end → **Track B**.
+<small>**Confusion:** Track **A** desktop bundles (`.exe` / `.dmg` / AppImage) are all “panel only”; **all OSes** open the **dashboard** first (`packaging/electron/main.js`). Track **B** is **not** the same as installing only those bundles.</small>
 
 ---
 
-### Track A — Install the lobster panel only
+### Prerequisite (all OSes)
 
-**All three OSes support “panel only”:** same Next.js app, same Electron **`main.js`** (tray, **`utilityProcess`** standalone server, browser opens **`/setup`** by default), port **3003**. Install either as a **desktop bundle** (no separate Node for end users) or with **local Node / Docker**.
+- **Node.js 18+**; from the monorepo folder **`软件SOFT/龙虾可视化控制面板`**, run **`npm install`** once.
+- Clone example:
 
-**Native modules:** this app uses **better-sqlite3**. **Always run `npm run build` on the OS you ship for** (or run full **`npm run electron:dist`**, which builds first). **Do not** copy a Windows-built **`.next/standalone`** onto macOS/Linux and package it — the wrong **`.node`** binary will load.
+```bash
+git clone https://github.com/gaogg521/Openclaw-SKILLS-OneOne-.git
+cd Openclaw-SKILLS-OneOne-/软件SOFT/龙虾可视化控制面板
+npm install
+```
 
-Agents, gateway health, `/setup` writing config still need a valid **`OPENCLAW_HOME`** (with **`openclaw.json`**) and usually a running **Gateway**; install OpenClaw **separately** if needed, or use **`/setup`** plus official docs.
-
-#### Windows
-
-| Role | What to do |
-|------|------------|
-| **End users (no separate Node)** | Build the installer **on Windows**: from repo root **`npm run electron:dist`**, or [`packaging/electron/build-electron.ps1`](packaging/electron/build-electron.ps1) / [`build-electron.js`](packaging/electron/build-electron.js). Output **NSIS `.exe`** under [`packaging/electron/dist/`](packaging/electron/dist/) (optional copies in **`dist/releases/`**). See [`packaging/electron/README.md`](packaging/electron/README.md). |
-| **Developers** | **Node 18+** → `npm install` → `npm run dev`. |
-| **Local prod / portable** | After **`npm run build`**, run **`npm run start`** (or **`npm run packaging:prepare-standalone`** first; same idea as **`node server.js`** under **`.next/standalone`** with **PORT=3003**). |
-
-#### macOS
-
-**Supported.** **Desktop:** on **macOS**, run **`npm run electron:dist`** (or `cd packaging/electron && ./build-electron.sh`). [`electron-builder.config.js`](packaging/electron/electron-builder.config.js) emits **`.dmg` and `.zip`** (x64 + arm64). Behavior matches the Windows installer build. Unsigned builds may require **Open Anyway** in Privacy & Security or right-click → Open. Optional icons: **`packaging/electron/build/icon.icns`** or **`icon.png`** (~512px).  
-**Without desktop bundle:** `npm run dev` / `npm run start`, or **Docker**.
-
-#### Linux (incl. Ubuntu)
-
-**Supported.** **Desktop:** on **Linux**, **`npm run electron:dist`** or **`packaging/electron/build-electron.sh`** → **AppImage** by default. Same runtime behavior as Windows. Prefer **nvm** / NodeSource for **Node 18+**. Optional **`packaging/electron/build/icon.png`**.  
-**Without desktop bundle:** **Node** or **Docker**, same as macOS.
-
-**When the panel is up:** open **http://localhost:3003**. Set **`OPENCLAW_HOME`** in **`.env.local`** if not using the default tree (see **Configuration**).
+<small>Browsing the panel UI does **not** require OpenClaw. Gateway, agents, and **`/setup`**-driven CLI config need **`OPENCLAW_HOME`** and a running Gateway when you need them. Use **Docker** as documented in the **Docker** section below if you prefer containers.</small>
 
 ---
 
-### Track B — One-click pipeline (OpenClaw + lobster panel)
+### Track A · Dev / production (Node — same commands on every OS)
 
-**Folder:** **[`packaging/openclaw-oneclick/`](packaging/openclaw-oneclick/)**.
+Run from the **project root**. Default port **3003**.
 
-**Flow outline:**
+| OS | Shell | Development | Production |
+|----|-------|-------------|------------|
+| **Windows** | PowerShell / CMD | `npm run dev` | `npm run build`<br>then `npm run start` |
+| **macOS** | Terminal | same | same |
+| **Linux** | Bash | same | same |
 
-1. **Conflict checks** — skip reinstall if `openclaw` is on PATH; optional checks for gateway (**18789**) and lobster (**3003**) (see that README).  
-2. **Install OpenClaw** — wrappers around official **`install.sh` / `install.ps1`**.  
-3. **Onboarding** — **`http://localhost:3003/setup`**, or **`wizard.env` + `run-onboard-from-env`** → **`openclaw onboard --non-interactive`**.  
-4. **Start lobster** — run **`npm run packaging:prepare-standalone`** in this repo, then **`start-lobster-standalone`**.ps1 / .sh.  
-5. **Open dashboards** — **`wait-gateway-open-dashboards`**.ps1 / .sh, etc.
+<small>**Dev:** `next dev` + HMR; **3003** must be free.**Production:** **`output: "standalone"`** — do **not** use `next start -p 3003`. Re-**`build`** after code changes. You **don’t** need **`build`** before every **`start`** if you only restarted without changes. On Ubuntu, prefer **nvm** / NodeSource over stale distro **nodejs**.</small>
 
-**Read first by OS:**
+---
 
-| OS | Docs |
-|----|------|
-| **Windows** | **[`WINDOWS_USER_JOURNEY.zh-CN.md`](packaging/openclaw-oneclick/WINDOWS_USER_JOURNEY.zh-CN.md)**; maintainers: **[`packaging/openclaw-oneclick/README.md`](packaging/openclaw-oneclick/README.md)**, **[`docs/DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md`](docs/DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md)**. |
-| **macOS / Linux** | Same README: **`install-openclaw-macos-linux.sh`**, **`start-lobster-standalone.sh`**, **`wait-gateway-open-dashboards.sh`**, etc. |
+### Track A · Desktop bundle (Electron — end users need no global Node)
 
-**Scope:** a single polished “double-click” installer with **portable Node + CLI + lobster** is **your CI/signing** work (Inno, pkg, create-dmg, …). This repo ships **scripts + ISS skeletons**; see openclaw-oneclick README (**DMG/EXE**).
+**Build on the target OS** (includes `npm run build` because of **better-sqlite3**). **Do not** copy a Windows **`.next/standalone`** to Mac/Linux and package it.
+
+| OS | Shell | Build (project root) | Notes |
+|----|-------|------------------------|-------|
+| **Windows** | PowerShell | `npm run electron:dist`<br>or `packaging\electron\build-electron.ps1` | <small>**NSIS `.exe`** → [`packaging/electron/dist/`](packaging/electron/dist/). See [packaging/electron/README.md](packaging/electron/README.md).</small> |
+| **macOS** | Terminal | `npm run electron:dist`<br>or `packaging/electron/build-electron.sh` | <small>**`.dmg` / `.zip`**. Unsigned: **Open Anyway** or right-click → Open. Optional `build/icon.icns` or `icon.png`.</small> |
+| **Linux** | Bash | `npm run electron:dist`<br>or `packaging/electron/build-electron.sh` | <small>Default **AppImage**; some distros need FUSE. Optional `build/icon.png`.</small> |
+
+<small>With a fresh standalone already built: **`npm run electron:dist:skip-next`**. Tray menu still has **Setup wizard** → **`/setup`**.</small>
+
+---
+
+### Common npm scripts (Track A · Node)
+
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Dev server (**3003**) |
+| `npm run build` | Production build + sync standalone assets |
+| `npm run start` | Start standalone production server |
+| `npm run stop` | Free port **3003** |
+| `npm run restart` | Stop + start prod (**no** auto **`build`**) |
+| `npm run generate-pixel-assets` | Maintainer: pixel assets |
+| `npm run i18n:merge-sea` | Maintainer: merge SEA locale chunks |
+
+---
+
+### Browser & security (extra)
+
+<small>Prefer **`http://localhost:3003`** or **`http://127.0.0.1:3003`**. For LAN IPs, set **`CONFIG_ALLOW_LAN=1`** in **`.env.local`** (see **`.env.example`**). Avoid **`SETUP_ALLOW_REMOTE=1`** on the public internet. Custom config tree: **Configuration** below.</small>
+
+---
+
+### Track B · One-click pipeline (OpenClaw + panel)
+
+| OS | Shell | Entry / scripts | Notes |
+|----|-------|-----------------|-------|
+| **Windows** | PowerShell | [WINDOWS_USER_JOURNEY.zh-CN.md](packaging/openclaw-oneclick/WINDOWS_USER_JOURNEY.zh-CN.md) | <small>User + maintainer docs; also [openclaw-oneclick/README.md](packaging/openclaw-oneclick/README.md), [DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md](docs/DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md). Includes checks, official **`install.ps1`**, **`npm run packaging:prepare-standalone`**, **`start-lobster-standalone.ps1`**, etc.</small> |
+| **macOS** | Terminal | **`packaging/openclaw-oneclick/*.sh`** | <small>e.g. **`install-openclaw-macos-linux.sh`**, **`start-lobster-standalone.sh`**, **`wait-gateway-open-dashboards.sh`** — order in that README.</small> |
+| **Linux** | Bash | same as macOS | <small>One polished “portable Node + CLI + panel” installer is **your** CI/signing work (Inno, pkg, …); this repo ships scripts + ISS skeletons.</small> |
+
+**Track B / maintainers:** **[`packaging/openclaw-oneclick/README.md`](packaging/openclaw-oneclick/README.md)**. Comparable UX: **[OneClaw](https://github.com/oneclaw/oneclaw)**.
 
 ---
 
 ## Getting Started
 
-**If you have not picked a track yet, read [Installation](#install-guide) first.** Short map: **panel only** → Track **A** (all OSes: **`npm run electron:dist`** for a desktop bundle, or **Node** / **Docker**); **fresh CLI + panel** → Track **B** **`packaging/openclaw-oneclick/`** (on Windows, read **`WINDOWS_USER_JOURNEY`**).
-
-See [Quick Start Guide](quick_start.md) for prompt / git / skill install options.
-
-This app lives under the monorepo folder **`软件SOFT/龙虾可视化控制面板`**. After cloning [Openclaw-SKILLS-OneOne-](https://github.com/gaogg521/Openclaw-SKILLS-OneOne-.git):
-
-```bash
-git clone https://github.com/gaogg521/Openclaw-SKILLS-OneOne-.git
-cd Openclaw-SKILLS-OneOne-/软件SOFT/龙虾可视化控制面板
-
-npm install
-npm run dev
-```
-
-- **Port `3003` by default** (see `package.json`).
-- **`npm run dev`** — `next dev` with HMR; runs **`scripts/check-dev-port.mjs`** first and exits if **3003** is in use.
-- **`npm run start`** — this repo uses **`output: "standalone"`** in **`next.config`**. Do **not** use raw **`next start -p 3003`** (not compatible with standalone). Instead:
-  1. Run **`npm run build`** when sources or deps change (build already copies **`static`** / **`public`** into **`.next/standalone`**).
-  2. Then **`npm run start`**, which runs **`scripts/start-prod.mjs`** → **`.next/standalone/server.js`** with default **`PORT=3003`**, **`HOSTNAME=0.0.0.0`**.
-  - You **do not** need **`build`** before every **`start`** if you only stopped the process and changed nothing.
-- **`npm run stop`** — kills whatever is **LISTENING on 3003** (`scripts/kill-port.mjs`).
-- **`npm run restart`** — always frees **3003**, then starts production with **`PORT=3003`** (`scripts/restart-prod.mjs`); it does **not** run **`build`**.
-- Open **`http://localhost:3003`** or **`http://127.0.0.1:3003`**. If you use a **LAN IP** (e.g. **`http://192.168.x.x:3003`**), set **`CONFIG_ALLOW_LAN=1`** in **`.env.local`** so `/api/config` and related guards accept private RFC1918 hosts (see **`.env.example`**). Avoid **`SETUP_ALLOW_REMOTE=1`** on public networks.
-
-Other scripts: `npm run generate-pixel-assets`, `npm run i18n:merge-sea` (maintainers). More detail: **[quick_start.md](quick_start.md)**.
-
-**Track B / maintainers:** full one-click narrative, conflict env vars, and ISS notes are in **[`packaging/openclaw-oneclick/README.md`](packaging/openclaw-oneclick/README.md)**. Comparable desktop UX: community **[OneClaw](https://github.com/oneclaw/oneclaw)**.
+Install, ports, and restart commands are in **[Installation](#install-guide)** above. Prompts, skills, and Git workflow: **[quick_start.md](quick_start.md)**.
 
 ## Tech Stack
 
@@ -361,9 +350,11 @@ Other scripts: `npm run generate-pixel-assets`, `npm run i18n:merge-sea` (mainta
 
 ## Requirements
 
-- **Track A (from source):** Node.js **18+**.  
-- **Track A (Windows `.exe`):** no global Node required; runtime is bundled in Electron.  
-- **OpenClaw:** required for **full** dashboard behaviour (Gateway, agents, `/setup` writes). Point **`OPENCLAW_HOME`** at the directory that contains **`openclaw.json`** (default `~/.openclaw` on Unix, `%USERPROFILE%\.openclaw` on Windows).
+<small>Commands and tracks: **[Installation](#install-guide)** above.</small>
+
+- **Track A (Node):** Node.js **18+**.  
+- **Track A (desktop bundle):** end users do **not** need a global Node (Electron bundles it).  
+- **OpenClaw:** needed for **full** integration (Gateway, agents, **`/setup`** writes). Set **`OPENCLAW_HOME`** to the tree with **`openclaw.json`** (Unix default `~/.openclaw`, Windows `%USERPROFILE%\.openclaw`).
 
 ## Configuration
 

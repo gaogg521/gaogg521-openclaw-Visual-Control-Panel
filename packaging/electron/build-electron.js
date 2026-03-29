@@ -25,7 +25,24 @@ function log(msg, c) {
 }
 
 function run(cmd, args, opts = {}) {
-  const r = spawnSync(cmd, args, { stdio: 'inherit', shell: process.platform === 'win32', ...opts });
+  const win = process.platform === 'win32';
+  let bin = cmd;
+  if (win) {
+    if (cmd === 'npm') bin = 'npm.cmd';
+    else if (cmd === 'npx') bin = 'npx.cmd';
+  }
+  const r = spawnSync(bin, args, {
+    stdio: 'inherit',
+    cwd: opts.cwd,
+    env: { ...process.env, ...opts.env },
+    windowsHide: win,
+  });
+  if (r.error) {
+    throw new Error(`${cmd} ${args.join(' ')}: ${r.error.message}`);
+  }
+  if (r.signal) {
+    throw new Error(`${cmd} ${args.join(' ')} 被信号终止: ${r.signal}`);
+  }
   if (r.status !== 0) {
     throw new Error(`${cmd} ${args.join(' ')} 失败 (exit ${r.status})`);
   }
@@ -83,8 +100,10 @@ function builderArgs() {
   }
 }
 
-function archiveWindowsExeIfAny() {
+function archiveWindowsExeIfAny(ebArgs) {
   if (process.platform !== 'win32') return;
+  // --dir 仅解包目录，不产生安装器；避免把 dist 里历史 .exe 误归档
+  if (ebArgs.includes('--dir')) return;
 
   const distDir = path.join(electronDir, 'dist');
   const releaseDir = path.join(distDir, 'releases');
@@ -124,9 +143,13 @@ function main() {
 
   const args = builderArgs();
   log(`\n[5/5] electron-builder ${args.join(' ')} ...`, 'y');
-  run('npx', ['electron-builder', '--config', 'electron-builder.config.js', ...args], { cwd: electronDir });
+  const ebCli = path.join(electronDir, 'node_modules', 'electron-builder', 'cli.js');
+  if (!fs.existsSync(ebCli)) {
+    throw new Error(`未找到 ${ebCli}，请在 packaging/electron 下执行 npm install`);
+  }
+  run(process.execPath, [ebCli, '--config', 'electron-builder.config.js', ...args], { cwd: electronDir });
 
-  archiveWindowsExeIfAny();
+  archiveWindowsExeIfAny(args);
 
   log('\n=== 构建完成 ✓ ===', 'g');
   log(`产物目录: ${path.join(electronDir, 'dist')}`, 'c');

@@ -4,11 +4,9 @@
  * ONE Claw 龙虾可视化控制台 — Electron 主进程
  *
  * 工作模式：
- *  1. 首次启动（或传入 --open-setup 参数）→ 等待 Next.js 就绪后用系统默认
- *     浏览器打开 /setup 完成初始化。
- *  2. 后续点击桌面/开始菜单快捷方式 → 默认打开 /setup，确保先走初始化体验。
- *  3. 系统托盘常驻，右键菜单可打开/退出。
- *  4. 单实例锁定：重复启动时聚焦已有实例。
+ *  - 任意系统：默认自动打开站点根路径（Next 会跳到仪表盘），不强制 /setup。
+ *  - 显式传 --open-setup 则打开 /setup；托盘菜单里仍可点「初始化向导」。
+ *  - 单实例锁；托盘常驻。
  */
 
 const { app, Tray, Menu, shell, utilityProcess, ipcMain, nativeImage } = require('electron');
@@ -38,9 +36,11 @@ if (!gotLock) {
 }
 
 app.on('second-instance', (_event, argv) => {
-  // 重复启动时仅在明确传参时打开 setup；否则静默忽略，避免反复弹窗
-  if (argv && argv.includes('--open-setup')) {
+  if (!argv || !argv.length) return;
+  if (argv.includes('--open-setup')) {
     openInBrowser(`${BASE_URL}/setup`);
+  } else if (argv.includes('--open-home')) {
+    openInBrowser(BASE_URL);
   }
 });
 
@@ -224,8 +224,13 @@ app.whenReady().then(async () => {
   appendLog('[APP] Electron app ready');
   createTray();
 
-  // 默认自动打开 /setup；仅显式传 --open-home 时打开首页
-  const openSetup = !process.argv.includes('--open-home');
+  // 三系统均默认控制台根路径；--open-setup 打开 /setup；--open-home 显式只开首页（与默认相同，保留兼容）
+  const argvHome = process.argv.includes('--open-home');
+  const argvSetup = process.argv.includes('--open-setup');
+  let openSetup;
+  if (argvHome) openSetup = false;
+  else if (argvSetup) openSetup = true;
+  else openSetup = false;
   const shouldAutoOpen = true;
 
   startNextServer();
@@ -250,7 +255,6 @@ app.whenReady().then(async () => {
   refreshTray();
 
   if (shouldAutoOpen && startupOk) {
-    // 默认打开 /setup（初始化向导）；传 --open-home 时打开首页
     openInBrowser(openSetup ? `${BASE_URL}/setup` : BASE_URL, true);
   }
 });
