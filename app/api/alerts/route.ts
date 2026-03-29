@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { OPENCLAW_HOME } from "@/lib/openclaw-paths";
+import { enforceLocalRequest } from "@/lib/api-local-guard";
+import {
+  applyIncidentActions,
+  summarizeIncidents,
+  type AlertIncident,
+  type AlertIncidentAction,
+} from "@/lib/alert-incidents";
 const ALERTS_CONFIG_PATH = path.join(OPENCLAW_HOME, "alerts.json");
 
 interface AlertRule {
@@ -18,6 +25,8 @@ interface AlertConfig {
   checkInterval: number; // 检查间隔（分钟）
   rules: AlertRule[];
   lastAlerts?: Record<string, number>; // 上次告警时间戳
+  incidents?: AlertIncident[];
+  snoozeByRuleMinutes?: Record<string, number>;
 }
 
 const DEFAULT_RULES: AlertRule[] = [
@@ -40,6 +49,13 @@ function getAlertConfig(): AlertConfig {
     checkInterval: 10,
     rules: DEFAULT_RULES,
     lastAlerts: {},
+    incidents: [],
+    snoozeByRuleMinutes: {
+      model_unavailable: 30,
+      bot_no_response: 30,
+      message_failure_rate: 30,
+      cron连续_failure: 30,
+    },
   };
 }
 
@@ -51,16 +67,20 @@ function saveAlertConfig(config: AlertConfig): void {
   fs.writeFileSync(ALERTS_CONFIG_PATH, JSON.stringify(config, null, 2));
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  const guard = enforceLocalRequest(req, "Alerts config API");
+  if (guard) return guard;
   try {
     const config = getAlertConfig();
-    return NextResponse.json(config);
+    return NextResponse.json({ ...config, summary: summarizeIncidents(config.incidents || []) });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
+  const guard = enforceLocalRequest(request, "Alerts config API");
+  if (guard) return guard;
   try {
     const body = await request.json();
     const config = getAlertConfig();
@@ -82,15 +102,29 @@ export async function POST(request: Request) {
         }
       }
     }
+    if (Array.isArray(body.incidentActions) && body.incidentActions.length > 0) {
+      config.incidents = applyIncidentActions(
+        config.incidents || [],
+        body.incidentActions as AlertIncidentAction[],
+      );
+    }
+    if (body.snoozeByRuleMinutes && typeof body.snoozeByRuleMinutes === "object") {
+      config.snoozeByRuleMinutes = {
+        ...(config.snoozeByRuleMinutes || {}),
+        ...body.snoozeByRuleMinutes,
+      };
+    }
 
     saveAlertConfig(config);
-    return NextResponse.json(config);
+    return NextResponse.json({ ...config, summary: summarizeIncidents(config.incidents || []) });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
 
 export async function PUT(request: Request) {
+  const guard = enforceLocalRequest(request, "Alerts config API");
+  if (guard) return guard;
   try {
     const body = await request.json();
     const config = getAlertConfig();
@@ -113,9 +147,21 @@ export async function PUT(request: Request) {
         }
       }
     }
+    if (Array.isArray(body.incidentActions) && body.incidentActions.length > 0) {
+      config.incidents = applyIncidentActions(
+        config.incidents || [],
+        body.incidentActions as AlertIncidentAction[],
+      );
+    }
+    if (body.snoozeByRuleMinutes && typeof body.snoozeByRuleMinutes === "object") {
+      config.snoozeByRuleMinutes = {
+        ...(config.snoozeByRuleMinutes || {}),
+        ...body.snoozeByRuleMinutes,
+      };
+    }
     
     saveAlertConfig(config);
-    return NextResponse.json(config);
+    return NextResponse.json({ ...config, summary: summarizeIncidents(config.incidents || []) });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

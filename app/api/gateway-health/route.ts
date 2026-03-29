@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import path from "path";
 import { exec, execFile } from "child_process";
 import { promisify } from "util";
 import { readJsonFileSync } from "@/lib/json";
@@ -121,7 +120,10 @@ async function getOpenclawVersion(): Promise<string | undefined> {
   }
 }
 
-export async function GET() {
+/** 合并重叠请求：轮询间隔 10s 但单次 probe 常 >10s 时会堆叠，每路都会 exec openclaw。 */
+let gatewayHealthInFlight: Promise<Record<string, unknown>> | null = null;
+
+async function computeGatewayHealthPayload(): Promise<Record<string, unknown>> {
   const startedAt = Date.now();
   try {
     const openclawVersion = await getOpenclawVersion();
@@ -143,7 +145,7 @@ export async function GET() {
       const checkedAt = Date.now();
       const responseMs = checkedAt - startedAt;
       const data = await resp.json().catch(() => null);
-      return NextResponse.json({
+      return {
         ok: true,
         data,
         openclawVersion,
@@ -151,14 +153,14 @@ export async function GET() {
         checkedAt,
         responseMs,
         webUrl,
-      });
+      };
     }
 
     const web = await probeGatewayViaWeb(port, token, 5000);
     if (web.ok) {
       const checkedAt = Date.now();
       const responseMs = checkedAt - startedAt;
-      return NextResponse.json({
+      return {
         ok: true,
         data: null,
         openclawVersion,
@@ -166,7 +168,7 @@ export async function GET() {
         checkedAt,
         responseMs,
         webUrl,
-      });
+      };
     }
 
     // OpenClaw 2026.3.x no longer serves /api/health; fallback to CLI probe.
@@ -174,7 +176,7 @@ export async function GET() {
     const checkedAt = Date.now();
     const responseMs = checkedAt - startedAt;
     if (cli.ok) {
-      return NextResponse.json({
+      return {
         ok: true,
         data: null,
         openclawVersion,
@@ -182,17 +184,17 @@ export async function GET() {
         checkedAt,
         responseMs,
         webUrl,
-      });
+      };
     }
 
-    return NextResponse.json({
+    return {
       ok: false,
       openclawVersion,
       error: cli.error || `HTTP ${resp.status}`,
       status: "down",
       checkedAt,
       responseMs,
-    });
+    };
   } catch (err: any) {
     const openclawVersion = await getOpenclawVersion();
     // If HTTP probe fails due transport/runtime issues, attempt CLI probe before declaring down.
@@ -221,7 +223,7 @@ export async function GET() {
     if (web.ok) {
       const checkedAt = Date.now();
       const responseMs = checkedAt - startedAt;
-      return NextResponse.json({
+      return {
         ok: true,
         data: null,
         openclawVersion,
@@ -229,13 +231,13 @@ export async function GET() {
         checkedAt,
         responseMs,
         webUrl: `http://localhost:${port}/chat${token ? '?token=' + encodeURIComponent(token) : ''}`,
-      });
+      };
     }
     const cli = await probeGatewayViaCli(token, 5000);
     const checkedAt = Date.now();
     const responseMs = checkedAt - startedAt;
     if (cli.ok) {
-      return NextResponse.json({
+      return {
         ok: true,
         data: null,
         openclawVersion,
@@ -243,15 +245,25 @@ export async function GET() {
         checkedAt,
         responseMs,
         webUrl: `http://localhost:${port}/chat${token ? '?token=' + encodeURIComponent(token) : ''}`,
-      });
+      };
     }
-    return NextResponse.json({
+    return {
       ok: false,
       openclawVersion,
       error: cli.error || raw,
       status: "down",
       checkedAt,
       responseMs,
+    };
+  }
+}
+
+export async function GET() {
+  if (!gatewayHealthInFlight) {
+    gatewayHealthInFlight = computeGatewayHealthPayload().finally(() => {
+      gatewayHealthInFlight = null;
     });
   }
+  const payload = await gatewayHealthInFlight;
+  return NextResponse.json(payload);
 }

@@ -3,12 +3,19 @@ import fs from "fs";
 import path from "path";
 import { getConfigCache, setConfigCache } from "@/lib/config-cache";
 import { OPENCLAW_CONFIG_PATH, OPENCLAW_HOME } from "@/lib/openclaw-paths";
+import { detectAndFixOpenclawHome, getResolvedConfigPath } from "@/lib/openclaw-home-detect";
 
 // 配置文件路径：优先使用 OPENCLAW_HOME 环境变量，否则默认 ~/.openclaw
 const CONFIG_PATH = OPENCLAW_CONFIG_PATH;
 const OPENCLAW_DIR = OPENCLAW_HOME;
 
 const CACHE_TTL_MS = 30_000;
+
+function isLocalHost(host: string | null): boolean {
+  if (!host) return false;
+  const h = host.split(":")[0]?.toLowerCase() ?? "";
+  return h === "localhost" || h === "127.0.0.1" || h === "::1" || h === "[::1]";
+}
 
 // 从配置的 allowFrom 读取用户 id，用于构建 session key
 
@@ -253,16 +260,30 @@ function readIdentityName(agentId: string, agentDir?: string, workspace?: string
   return null;
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  const host = req.headers.get("host");
+  const allowRemote = process.env.SETUP_ALLOW_REMOTE === "1";
+  if (!allowRemote && !isLocalHost(host)) {
+    return NextResponse.json(
+      { error: "Config API is localhost-only.", blocked: true },
+      { status: 403 },
+    );
+  }
   // 命中缓存直接返回
   const configCache = getConfigCache();
   if (configCache && Date.now() - configCache.ts < CACHE_TTL_MS) {
     return NextResponse.json(configCache.data);
   }
 
+  // 自动探测并修正 OPENCLAW_HOME（解决安装后路径不对的问题）
+  detectAndFixOpenclawHome();
+  // 使用探测后的实际路径（可能与启动时的 CONFIG_PATH 不同）
+  const resolvedConfigPath = getResolvedConfigPath();
+  const effectiveConfigPath = resolvedConfigPath !== CONFIG_PATH ? resolvedConfigPath : CONFIG_PATH;
+
   let raw: string;
   try {
-    raw = fs.readFileSync(CONFIG_PATH, "utf-8");
+    raw = fs.readFileSync(effectiveConfigPath, "utf-8");
   } catch (readErr: any) {
     const isNotFound = readErr?.code === "ENOENT";
     return NextResponse.json(

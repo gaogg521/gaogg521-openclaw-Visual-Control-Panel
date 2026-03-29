@@ -36,7 +36,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const saved = localStorage.getItem("theme") as Theme;
-    if (THEME_ORDER.includes(saved)) {
+    if (saved && THEME_ORDER.includes(saved)) {
       setThemeState(saved);
       document.documentElement.setAttribute("data-theme", saved);
     }

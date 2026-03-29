@@ -1,0 +1,20 @@
+# 环境变量临时文件
+.env.local
+.env.development.local
+.env.production.local
+
+# Next.js 缓存/构建目录
+.next/
+out/
+
+# 前端构建产物
+dist/
+build/
+
+# 日志文件
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# 依赖包（可选，一般都要排除）
+node_modules/

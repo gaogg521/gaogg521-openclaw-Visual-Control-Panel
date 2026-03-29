@@ -5,8 +5,30 @@ const home = os.homedir();
 
 export const OPENCLAW_HOME = process.env.OPENCLAW_HOME || path.join(home, ".openclaw");
 export const OPENCLAW_CONFIG_PATH = path.join(OPENCLAW_HOME, "openclaw.json");
+
+/**
+ * 运行时获取「已自动修正后」的 OPENCLAW_HOME。
+ * 首次调用会触发路径探测（懒加载），后续命中缓存直接返回。
+ * 适用于所有 API route 中需要读写 openclaw 文件的场景。
+ */
+export function getRuntimeOpenclawHome(): string {
+  // 动态 require 避免循环依赖（openclaw-home-detect → openclaw-paths → openclaw-home-detect）
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { getResolvedOpenclawHome } = require("./openclaw-home-detect") as typeof import("./openclaw-home-detect");
+  return getResolvedOpenclawHome();
+}
+
+export function getRuntimeConfigPath(): string {
+  return path.join(getRuntimeOpenclawHome(), "openclaw.json");
+}
 export const OPENCLAW_AGENTS_DIR = path.join(OPENCLAW_HOME, "agents");
 export const OPENCLAW_PIXEL_OFFICE_DIR = path.join(OPENCLAW_HOME, "pixel-office");
+
+/** 维度一：运行时向量/对话等 SQLite（Append-only 落盘） */
+export const OPENCLAW_MEMORY_SQLITE_DIR = path.join(OPENCLAW_HOME, "memory");
+
+/** 维度二：战略 Markdown 归档（各目录 MEMORY.md + memory 子目录下按日 recap 的 .md） */
+export const OPENCLAW_WORKSPACE_AGENTS_DIR = path.join(OPENCLAW_HOME, "workspace", "agents");
 
 function uniquePaths(paths: Array<string | undefined>): string[] {
   return Array.from(new Set(paths.filter((value): value is string => Boolean(value && value.trim()))));

@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { OPENCLAW_CONFIG_PATH, OPENCLAW_HOME } from "@/lib/openclaw-paths";
 import { parseApiJsonSafely, shouldFallbackToCli, testSessionViaCli } from "@/lib/session-test-fallback";
+import { enforceLocalRequest } from "@/lib/api-local-guard";
 const CONFIG_PATH = OPENCLAW_CONFIG_PATH;
 
 interface DmSessionResult {
@@ -86,7 +87,9 @@ async function testDmSession(
   }
 }
 
-export async function POST() {
+export async function POST(req: Request) {
+  const guard = enforceLocalRequest(req, "Test DM sessions API");
+  if (guard) return guard;
   try {
     const raw = fs.readFileSync(CONFIG_PATH, "utf-8");
     const config = JSON.parse(raw);
@@ -144,6 +147,6 @@ export async function POST() {
   }
 }
 
-export async function GET() {
-  return POST();
+export async function GET(req: Request) {
+  return POST(req);
 }

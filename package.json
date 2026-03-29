@@ -3,16 +3,21 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3003",
+    "dev": "node scripts/check-dev-port.mjs && next dev -p 3003",
     "build": "next build",
     "start": "next start -p 3003",
+    "smoke:gray": "powershell -ExecutionPolicy Bypass -File scripts/gray-smoke.ps1",
     "generate-pixel-assets": "node scripts/generate-pixel-office-assets.mjs",
-    "i18n:merge-sea": "node scripts/merge-sea-chunks.mjs"
+    "i18n:merge-sea": "node scripts/merge-sea-chunks.mjs",
+    "packaging:prepare-standalone": "npm run build && node scripts/copy-standalone-assets.mjs",
+    "brand:mark": "node scripts/process-brand-mark.mjs"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.0.0",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
+    "better-sqlite3": "^12.8.0",
     "mysql2": "^3.20.0",
     "next": "^16.0.0",
     "postcss": "^8.0.0",

@@ -40,7 +40,7 @@ async function loadTracks(): Promise<void> {
 }
 
 function pickNextTrack(): string {
-  if (bgmTracks.length === 0) return '/assets/pixel-office/pixel-adventure.mp3'
+  if (bgmTracks.length === 0) return '/assets/pixel-office/adventure.mp3'
   if (bgmTracks.length === 1) return bgmTracks[0]
   let idx: number
   do { idx = Math.floor(Math.random() * bgmTracks.length) } while (idx === bgmLastIndex)
@@ -137,6 +137,7 @@ export function unlockAudio(): void {
 
 export async function playBackgroundMusic(): Promise<void> {
   if (!soundEnabled) return
+  // 星舰 / 林间：使用程序化实时合成 BGM
   if (bgmOfficeGame === 'starship' || bgmOfficeGame === 'grove') {
     try {
       if (bgmAudio) {
@@ -149,13 +150,18 @@ export async function playBackgroundMusic(): Promise<void> {
     }
     return
   }
+  // 经典办公室：从 public/assets/pixel-office/*.mp3 中选曲播放
   stopProceduralBgm()
   await loadTracks()
   try {
     const audio = getBgmAudio()
     if (!audio) return
-    // If tracks loaded after audio element was created, update src to a proper random track
-    if (bgmTracks.length > 0 && audio.src.includes('pixel-adventure') && bgmTracks.length > 1) {
+    // 若 audio 创建时还没拿到 tracks，换成正确曲目
+    if (
+      bgmTracks.length > 0 &&
+      (audio.src.includes('pixel-adventure') || audio.src.includes('adventure')) &&
+      bgmTracks.length > 1
+    ) {
       audio.src = pickNextTrack()
       audio.load()
     }

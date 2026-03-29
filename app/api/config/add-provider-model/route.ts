@@ -5,6 +5,7 @@ import { callOpenclawGateway, resolveConfigSnapshotHash } from "@/lib/openclaw-c
 import { syncOpenclawToMysql } from "@/lib/db-sync";
 import { DEFAULT_MODEL_PROBE_TIMEOUT_MS, humanizeModelProbeError, probeModel } from "@/lib/model-probe";
 import { OPENCLAW_CONFIG_PATH, OPENCLAW_HOME } from "@/lib/openclaw-paths";
+import { enforceLocalRequest } from "@/lib/api-local-guard";
 
 const GATEWAY_TIMEOUT_MS = 20_000;
 
@@ -152,6 +153,8 @@ function statusForError(message: string): number {
  * 服务端会先对 provider/model 做一次 probe，失败则绝不写入。
  */
 export async function POST(request: Request) {
+  const guard = enforceLocalRequest(request, "Add provider model API");
+  if (guard) return guard;
   try {
     const body = await request.json().catch(() => null);
     const providerId = String(body?.providerId || "").trim();

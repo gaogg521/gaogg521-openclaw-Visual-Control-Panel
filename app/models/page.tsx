@@ -455,7 +455,7 @@ export default function ModelsPage() {
             {t("models.testAll")}
           </span>
           <Link
-            href="/"
+            href="/expert-squad"
             className="px-4 py-2 rounded-lg bg-[var(--card)] border border-[var(--border)] text-sm font-medium hover:border-[var(--accent)] transition"
           >
             {t("common.backOverview")}

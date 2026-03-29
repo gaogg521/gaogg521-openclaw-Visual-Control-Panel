@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 
 interface HealthResult {
@@ -23,22 +23,39 @@ export function GatewayStatus({ compact = false, className = "", hideIconOnMobil
   const [showError, setShowError] = useState(false);
   const [showVersionTip, setShowVersionTip] = useState(false);
 
-  const check = useCallback(() => {
-    fetch("/api/gateway-health")
-      .then((r) => r.json())
-      .then((d) => setHealth(d))
-      .catch(() => setHealth({ ok: false, error: t("gateway.fetchError") }));
+  // 串行轮询：单次 /api/gateway-health 常 >10s，setInterval 会堆叠请求并重复 exec openclaw。
+  useEffect(() => {
+    let cancelled = false;
+    let sleepTimer: ReturnType<typeof setTimeout> | null = null;
+    const sleep = (ms: number) =>
+      new Promise<void>((resolve) => {
+        sleepTimer = setTimeout(() => {
+          sleepTimer = null;
+          resolve();
+        }, ms);
+      });
+    (async () => {
+      while (!cancelled) {
+        try {
+          const r = await fetch("/api/gateway-health");
+          const d = await r.json();
+          if (!cancelled) setHealth(d);
+        } catch {
+          if (!cancelled) setHealth({ ok: false, error: t("gateway.fetchError") });
+        }
+        if (cancelled) break;
+        await sleep(10000);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (sleepTimer) clearTimeout(sleepTimer);
+    };
   }, [t]);
 
-  useEffect(() => {
-    check();
-    const timer = setInterval(check, 10000);
-    return () => clearInterval(timer);
-  }, [check]);
-
   const gatewayTitle = health?.openclawVersion
-    ? `OpenClaw ${health.openclawVersion}`
-    : "OpenClaw";
+    ? `ONE CLAW ${String(health.openclawVersion).replace(/\bOpenClaw\s*/gi, "").trim()}`
+    : "ONE CLAW";
   const chatIcon = (
     <svg
       aria-hidden="true"

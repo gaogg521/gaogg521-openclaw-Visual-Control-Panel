@@ -21,7 +21,9 @@ export function resolveOpenclawExecutable(): string {
   const candidates: string[] = [];
 
   if (process.platform === "win32") {
-    const appdata = process.env.APPDATA;
+    const appdata =
+      process.env.APPDATA ||
+      (process.env.USERPROFILE ? path.join(process.env.USERPROFILE, "AppData", "Roaming") : undefined);
     if (appdata) {
       candidates.push(path.join(appdata, "npm", "openclaw.cmd"));
       candidates.push(path.join(appdata, "npm", "openclaw"));
@@ -93,27 +95,103 @@ export function resolveOpenclawMjsPath(): string | null {
  * 执行 openclaw CLI。优先 `node openclaw.mjs`（无 cmd 层），保证 `--params` 大段 JSON 不被破坏；
  * 找不到包时再回退到 openclaw / openclaw.cmd。
  */
-export async function execOpenclaw(args: string[]): Promise<{ stdout: string; stderr: string }> {
-  const mjs = resolveOpenclawMjsPath();
+export async function execOpenclaw(
+  args: string[],
+  opts?: { timeoutMs?: number; preferExecutable?: boolean },
+): Promise<{ stdout: string; stderr: string }> {
+  const mjs = opts?.preferExecutable ? null : resolveOpenclawMjsPath();
   const baseEnv = { ...process.env, FORCE_COLOR: "0" };
+  const timeout = opts?.timeoutMs;
   let r: { stdout: string | Buffer; stderr: string | Buffer };
 
   if (mjs) {
     r = await execFileAsync(process.execPath, [mjs, ...args], {
       encoding: "utf8",
       maxBuffer: 10 * 1024 * 1024,
+      ...(typeof timeout === "number" ? { timeout } : {}),
       env: baseEnv,
       windowsHide: true,
     });
   } else {
     const exe = resolveOpenclawExecutable();
-    r = await execFileAsync(exe, args, execOptionsForOpenclaw(exe));
+    r = await execFileAsync(exe, args, {
+      ...execOptionsForOpenclaw(exe),
+      ...(typeof timeout === "number" ? { timeout } : {}),
+    });
   }
 
   return {
     stdout: typeof r.stdout === "string" ? r.stdout : r.stdout?.toString?.("utf8") ?? "",
     stderr: typeof r.stderr === "string" ? r.stderr : r.stderr?.toString?.("utf8") ?? "",
   };
+}
+
+/**
+ * 与 execOpenclaw 相同启动方式，但进程非零退出时不抛错（供 gateway restart 等：CLI 可能因健康检查超时退出，而服务已起来）。
+ * 仅 spawn / 可执行文件缺失等仍会 reject。
+ */
+export function execOpenclawWithExitCode(
+  args: string[],
+  opts?: { timeoutMs?: number },
+): Promise<{ code: number; stdout: string; stderr: string }> {
+  const mjs = resolveOpenclawMjsPath();
+  const baseEnv = { ...process.env, FORCE_COLOR: "0" };
+
+  return new Promise((resolve, reject) => {
+    const finish = (
+      err: Error | null,
+      stdout: string | Buffer,
+      stderr: string | Buffer,
+    ) => {
+      const out = typeof stdout === "string" ? stdout : stdout?.toString?.("utf8") ?? "";
+      const errStr = typeof stderr === "string" ? stderr : stderr?.toString?.("utf8") ?? "";
+      if (err) {
+        const ne = err as NodeJS.ErrnoException;
+        if (ne.code === "ENOENT" || /ENOENT/i.test(String(ne.message))) {
+          reject(err);
+          return;
+        }
+        const raw = (ne as { code?: string | number }).code;
+        const code =
+          typeof raw === "number"
+            ? raw
+            : typeof raw === "string" && /^\d+$/.test(raw)
+              ? Number(raw)
+              : 1;
+        resolve({ code, stdout: out, stderr: errStr });
+        return;
+      }
+      resolve({ code: 0, stdout: out, stderr: errStr });
+    };
+
+    if (mjs) {
+      execFile(
+        process.execPath,
+        [mjs, ...args],
+        {
+          encoding: "utf8",
+          maxBuffer: 10 * 1024 * 1024,
+          ...(typeof opts?.timeoutMs === "number" ? { timeout: opts.timeoutMs } : {}),
+          env: baseEnv,
+          windowsHide: true,
+        },
+        finish,
+      );
+    } else {
+      const exe = resolveOpenclawExecutable();
+      execFile(
+        exe,
+        args,
+        {
+          ...execOptionsForOpenclaw(exe),
+          encoding: "utf8",
+          maxBuffer: 10 * 1024 * 1024,
+          ...(typeof opts?.timeoutMs === "number" ? { timeout: opts.timeoutMs } : {}),
+        },
+        finish,
+      );
+    }
+  });
 }
 
 /** 供 API 错误提示：推荐用户在 .env.local 中设置的示例路径 */
@@ -182,16 +260,19 @@ export async function callOpenclawGateway(method: string, params: Record<string,
   try {
     // OpenClaw CLI: `gateway call [options] <method>` —— method 必须放在最后，
     // 否则 `--json` / `--timeout` / `--params` 会被当成多余位置参数。
-    const { stdout, stderr } = await execOpenclaw([
-      "gateway",
-      "call",
-      "--json",
-      "--timeout",
-      String(timeoutMs),
-      "--params",
-      JSON.stringify(params),
-      method,
-    ]);
+    const { stdout, stderr } = await execOpenclaw(
+      [
+        "gateway",
+        "call",
+        "--json",
+        "--timeout",
+        String(timeoutMs),
+        "--params",
+        JSON.stringify(params),
+        method,
+      ],
+      { timeoutMs: Math.min(120_000, Math.max(5000, timeoutMs + 2500)) },
+    );
     const parsed = parseOpenclawJsonOutput(stdout, stderr);
     if (parsed == null) {
       throw new Error(`Failed to parse Gateway response for ${method}`);

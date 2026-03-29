@@ -6,8 +6,9 @@ import { AlertMonitor } from "./alert-monitor";
 import { GlobalBugsOverlay } from "./global-bugs-overlay";
 
 export const metadata: Metadata = {
-  title: "1one龙虾办公室",
-  description: "OpenClaw 专家战队/Agent 与会话一览 · 1one龙虾办公室",
+  title: "ONE CLAW控制台",
+  description: "ONE CLAW 专家战队 / Agent 与会话一览 · ONE CLAW控制台",
+  icons: { icon: "/brand-mark.png", apple: "/brand-mark.png" },
 };
 
 export const viewport: Viewport = {

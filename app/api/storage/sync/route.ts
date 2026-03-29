@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { syncOpenclawToMysql } from "@/lib/db-sync";
 import { getMysqlPool } from "@/lib/mysql";
+import { enforceLocalRequest } from "@/lib/api-local-guard";
 
-export async function POST() {
+export async function POST(req: Request) {
+  const guard = enforceLocalRequest(req, "Storage sync API");
+  if (guard) return guard;
   try {
     const summary = await syncOpenclawToMysql("api:storage-sync");
     return NextResponse.json({ ok: true, ...summary });
@@ -14,7 +17,9 @@ export async function POST() {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  const guard = enforceLocalRequest(req, "Storage sync API");
+  if (guard) return guard;
   try {
     const pool = getMysqlPool();
     const [rows] = await pool.query(

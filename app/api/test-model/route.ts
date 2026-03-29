@@ -4,10 +4,13 @@ import {
   humanizeModelProbeError,
   probeModel,
 } from "@/lib/model-probe";
+import { enforceLocalRequest } from "@/lib/api-local-guard";
 
 const PROBE_TIMEOUT_MS = DEFAULT_MODEL_PROBE_TIMEOUT_MS;
 
 export async function POST(req: Request) {
+  const guard = enforceLocalRequest(req, "Test model API");
+  if (guard) return guard;
   try {
     const body = await req.json().catch(() => ({}));
     const providerId = String(body?.provider || "").trim();

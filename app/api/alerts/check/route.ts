@@ -1,7 +1,16 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import { getAgentAlertActivityBreakdown } from "@/lib/agent-session-activity";
+import { fetchGatewayAgentActivityMap } from "@/lib/gateway-agent-activity-hint";
+import {
+  DEFAULT_MODEL_PROBE_TIMEOUT_MS,
+  humanizeModelProbeError,
+  probeModel,
+} from "@/lib/model-probe";
 import { OPENCLAW_CONFIG_PATH, OPENCLAW_HOME } from "@/lib/openclaw-paths";
+import { enforceLocalRequest } from "@/lib/api-local-guard";
+import { reconcileIncidents, summarizeIncidents, type AlertIncident, type AlertSeverity } from "@/lib/alert-incidents";
 const ALERTS_CONFIG_PATH = path.join(OPENCLAW_HOME, "alerts.json");
 
 interface AlertRule {
@@ -18,7 +27,21 @@ interface AlertConfig {
   checkInterval: number;
   rules: AlertRule[];
   lastAlerts?: Record<string, number>;
+  incidents?: AlertIncident[];
 }
+
+/** 告警列表项：Bot 无响应类可带 lastActiveAt（与 /api/agent-status 同源会话推断） */
+export type AlertCheckResultItem = {
+  incidentKey: string;
+  message: string;
+  severity?: AlertSeverity;
+  agentId?: string;
+  /** 告警判定采用的「最近活跃」时间（已合并会话 / 目录 mtime / Gateway） */
+  lastActiveAt?: number;
+  sessionRecordMs?: number;
+  dirMtimeMs?: number;
+  gatewayActivityMs?: number;
+};
 
 function getAlertConfig(): AlertConfig {
   try {
@@ -32,7 +55,7 @@ function getAlertConfig(): AlertConfig {
     { id: "bot_no_response", name: "Bot Long Time No Response", enabled: false, threshold: 300 },
     { id: "message_failure_rate", name: "Message Failure Rate High", enabled: false, threshold: 50 },
     { id: "cron连续_failure", name: "Cron Continuous Failure", enabled: false, threshold: 3 },
-  ], lastAlerts: {} };
+  ], lastAlerts: {}, incidents: [] };
 }
 
 function getOpenclawConfig() {
@@ -51,6 +74,15 @@ function saveAlertConfig(config: AlertConfig): void {
     fs.mkdirSync(dir, { recursive: true });
   }
   fs.writeFileSync(ALERTS_CONFIG_PATH, JSON.stringify(config, null, 2));
+}
+
+function shouldSendNotification(config: AlertConfig, incidentKey: string, now: number): boolean {
+  const incidents = Array.isArray(config.incidents) ? config.incidents : [];
+  const hit = incidents.find((x) => x.incidentKey === incidentKey);
+  if (!hit) return true;
+  if (hit.status === "acknowledged") return false;
+  if (hit.status === "snoozed" && typeof hit.snoozeUntil === "number" && hit.snoozeUntil > now) return false;
+  return true;
 }
 
 function getGatewayConfig() {
@@ -265,53 +297,60 @@ async function sendAlert(agentId: string, message: string) {
   }
 }
 
-// 检查模型是否可用
-async function checkModelAlerts(config: AlertConfig) {
-  const results: string[] = [];
+// 检查模型是否可用（直连 probeModel，避免硬编码 localhost:3000 与仪表盘端口不一致导致 fetch failed）
+async function checkModelAlerts(config: AlertConfig): Promise<AlertCheckResultItem[]> {
+  const results: AlertCheckResultItem[] = [];
   const rule = config.rules.find(r => r.id === "model_unavailable");
   if (!rule?.enabled) return results;
 
-  // 读取配置中的所有模型
   const openclawConfig = getOpenclawConfig();
   const providers = openclawConfig.models?.providers || {};
 
-  // 测试每个模型
-  const allModels: Array<{provider: string, id: string}> = [];
+  const allModels: Array<{ provider: string; id: string }> = [];
   for (const [providerId, provider] of Object.entries(providers)) {
-    const p = provider as any;
+    const p = provider as { models?: Array<{ id?: string }> };
     if (p.models && Array.isArray(p.models)) {
       for (const model of p.models) {
-        allModels.push({provider: providerId, id: model.id});
+        if (model?.id) allModels.push({ provider: providerId, id: model.id });
       }
     }
   }
 
-  // 测试所有模型
-  for (const {provider, id} of allModels) {
+  const timeoutMs = DEFAULT_MODEL_PROBE_TIMEOUT_MS;
+  for (const { provider, id } of allModels) {
     try {
-      const testStart = Date.now();
-      const testResp = await fetch("http://localhost:3000/api/test-model", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({provider, modelId: id}),
-        signal: AbortSignal.timeout(10000),
+      const testResult = await probeModel({
+        providerId: provider,
+        modelId: id,
+        timeoutMs,
       });
-      
-      const testResult = await testResp.json();
-      
+
       if (!testResult.ok) {
-        results.push(`🚨 模型 ${provider}/${id} 不可用！`);
-        
+        const hint = humanizeModelProbeError(testResult.error) || testResult.error || "未知错误";
+        const incidentKey = `model_unavailable:${provider}/${id}`;
+        results.push({
+          incidentKey,
+          severity: "critical",
+          message: `🚨 模型 ${provider}/${id} 不可用：${hint}`,
+        });
+
         const lastAlert = config.lastAlerts?.[`${rule.id}_${provider}_${id}`] || 0;
         const now = Date.now();
-        if (now - lastAlert > 60000) {
-          await sendAlertViaFeishu(config.receiveAgent, `模型 ${provider}/${id} 不可用，请检查配置`);
+        if (now - lastAlert > 60000 && shouldSendNotification(config, incidentKey, now)) {
+          await sendAlertViaFeishu(
+            config.receiveAgent,
+            `模型 ${provider}/${id} 不可用：${hint}`,
+          );
           config.lastAlerts = config.lastAlerts || {};
           config.lastAlerts[`${rule.id}_${provider}_${id}`] = now;
         }
       }
     } catch (err: any) {
-      results.push(`🚨 测试模型 ${provider}/${id} 时出错：${err.message}`);
+      results.push({
+        incidentKey: `model_unavailable:${provider}/${id}`,
+        severity: "critical",
+        message: `🚨 测试模型 ${provider}/${id} 时出错：${err?.message || String(err)}`,
+      });
     }
   }
 
@@ -319,8 +358,8 @@ async function checkModelAlerts(config: AlertConfig) {
 }
 
 // 检查 Bot 响应时间
-async function checkBotResponseAlerts(config: AlertConfig) {
-  const results: string[] = [];
+async function checkBotResponseAlerts(config: AlertConfig): Promise<AlertCheckResultItem[]> {
+  const results: AlertCheckResultItem[] = [];
   const rule = config.rules.find(r => r.id === "bot_no_response");
   if (!rule?.enabled) return results;
 
@@ -338,40 +377,37 @@ async function checkBotResponseAlerts(config: AlertConfig) {
     agentIds = agentIds.filter(id => targetAgents.includes(id));
   }
 
+  const gatewayActivityByAgent = await fetchGatewayAgentActivityMap();
+
   for (const agentId of agentIds) {
-    const sessionsDir = path.join(agentsDir, agentId, "sessions");
-    let files: string[] = [];
-    try {
-      files = fs.readdirSync(sessionsDir).filter(f => f.endsWith(".jsonl"));
-    } catch { continue; }
-
-    let lastActivity = 0;
-    for (const file of files) {
-      const filePath = path.join(sessionsDir, file);
-      try {
-        const content = fs.readFileSync(filePath, "utf-8");
-        const lines = content.trim().split("\n");
-        for (const line of lines) {
-          try {
-            const entry = JSON.parse(line);
-            if (entry.timestamp) {
-              const ts = new Date(entry.timestamp).getTime();
-              if (ts > lastActivity) lastActivity = ts;
-            }
-          } catch {}
-        }
-      } catch {}
-    }
-
+    const gwMs = gatewayActivityByAgent.get(agentId) ?? 0;
+    const b = getAgentAlertActivityBreakdown(agentId, gwMs);
+    const lastActivity = b.effectiveMs;
     const now = Date.now();
     const thresholdMs = (rule.threshold || 300) * 1000;
-    if (lastActivity > 0 && (now - lastActivity) > thresholdMs) {
+    if (lastActivity > 0 && now - lastActivity > thresholdMs) {
       const mins = Math.round((now - lastActivity) / 60000);
-      results.push(`⚠️ Agent ${agentId} 已 ${mins} 分钟无响应`);
-      
+      const lastSeenZh = new Date(lastActivity).toLocaleString("zh-CN", {
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      });
+      const incidentKey = `bot_no_response:${agentId}`;
+      results.push({
+        incidentKey,
+        severity: "warning",
+        message: `⚠️ Agent ${agentId} 已 ${mins} 分钟无响应`,
+        agentId,
+        lastActiveAt: lastActivity,
+        sessionRecordMs: b.sessionRecordMs,
+        dirMtimeMs: b.dirMtimeMs,
+        gatewayActivityMs: b.gatewayMs,
+      });
+
       const lastAlert = config.lastAlerts?.[`${rule.id}_${agentId}`] || 0;
-      if (now - lastAlert > 60000) {
-        await sendAlertViaFeishu(config.receiveAgent, `Agent ${agentId} 已 ${mins} 分钟无响应`);
+      if (now - lastAlert > 60000 && shouldSendNotification(config, incidentKey, now)) {
+        await sendAlertViaFeishu(
+          config.receiveAgent,
+          `Agent ${agentId} 已 ${mins} 分钟无响应（综合最近活跃：${lastSeenZh}，已含会话/目录/Gateway）`,
+        );
         config.lastAlerts = config.lastAlerts || {};
         config.lastAlerts[`${rule.id}_${agentId}`] = now;
       }
@@ -382,8 +418,8 @@ async function checkBotResponseAlerts(config: AlertConfig) {
 }
 
 // 检查 Cron 失败
-async function checkCronAlerts(config: AlertConfig) {
-  const results: string[] = [];
+async function checkCronAlerts(config: AlertConfig): Promise<AlertCheckResultItem[]> {
+  const results: AlertCheckResultItem[] = [];
   const rule = config.rules.find(r => r.id === "cron连续_failure");
   if (!rule?.enabled) return results;
 
@@ -400,10 +436,15 @@ async function checkCronAlerts(config: AlertConfig) {
   const mockCronFailures = Math.floor(Math.random() * 5); // 模拟 0-4 次失败
   
   if (mockCronFailures >= (rule.threshold || 3)) {
-    results.push(`🚨 Cron 连续失败 ${mockCronFailures} 次！`);
+    const incidentKey = "cron连续_failure:global";
+    results.push({
+      incidentKey,
+      severity: "critical",
+      message: `🚨 Cron 连续失败 ${mockCronFailures} 次！`,
+    });
     const lastAlert = config.lastAlerts?.[rule.id] || 0;
     const now = Date.now();
-    if (now - lastAlert > 300000) { // 5分钟内不重复
+    if (now - lastAlert > 300000 && shouldSendNotification(config, incidentKey, now)) { // 5分钟内不重复
       await sendAlertViaFeishu(config.receiveAgent, `Cron 连续失败 ${mockCronFailures} 次，请检查定时任务配置`);
       config.lastAlerts = config.lastAlerts || {};
       config.lastAlerts[rule.id] = now;
@@ -413,7 +454,9 @@ async function checkCronAlerts(config: AlertConfig) {
   return results;
 }
 
-export async function POST() {
+export async function POST(req: Request) {
+  const guard = enforceLocalRequest(req, "Alerts check API");
+  if (guard) return guard;
   try {
     const config = getAlertConfig();
     
@@ -421,13 +464,14 @@ export async function POST() {
       return NextResponse.json({ 
         success: false, 
         message: "Alerts are disabled",
-        results: [] 
+        results: [],
+        incidents: config.incidents || [],
+        summary: summarizeIncidents(config.incidents || []),
       });
     }
 
-    const allResults: string[] = [];
+    const allResults: AlertCheckResultItem[] = [];
 
-    // 执行各项检查
     const modelResults = await checkModelAlerts(config);
     allResults.push(...modelResults);
 
@@ -437,6 +481,10 @@ export async function POST() {
     const cronResults = await checkCronAlerts(config);
     allResults.push(...cronResults);
 
+    const incidents = reconcileIncidents(config.incidents || [], allResults, Date.now());
+    config.incidents = incidents;
+    const summary = summarizeIncidents(incidents);
+
     // 保存配置（更新 lastAlerts）
     saveAlertConfig(config);
 
@@ -444,6 +492,8 @@ export async function POST() {
       success: true,
       message: `Found ${allResults.length} alerts`,
       results: allResults,
+      incidents,
+      summary,
       config: {
         enabled: config.enabled,
         receiveAgent: config.receiveAgent,

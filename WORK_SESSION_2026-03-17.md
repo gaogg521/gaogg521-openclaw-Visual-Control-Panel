@@ -2,6 +2,22 @@
 
 本文档用于「今天收工 / 下次续作」对齐上下文，**勿写入密钥**。
 
+---
+
+## 部署向导 + Windows 安装包（同日续作）
+
+**详细交接（必读）**：[`docs/DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md`](docs/DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md)
+
+**摘要**：
+
+- **浏览器 `/setup`**：预检 CLI → 五步向导 → `onboard`；与 EXE/绿色包两条用户路线对照见 `packaging/openclaw-oneclick/WINDOWS_USER_JOURNEY.zh-CN.md`。
+- **完整 Windows 包**：`windows/OpenClawOneClick.Full.iss` → 输出 `Output/ONECLAW-OneClick-Full-Setup.exe`；内置 Node/MinGit 需先跑 `prepare-full-redist.ps1`；`install-bundled-tools.ps1` 写**用户 PATH**、失败弹窗；`FULL_INSTALL.md` 含静默安装说明；`redist/.gitignore` 避免大文件入库。
+- **编译**：本机 Inno Setup **6.7.1** 已成功编译 Full.iss（2026-03-17）。
+
+**下次可接着做**：CI 打 redist + ISCC、安装器签章、Full 包与 `install-openclaw-windows.ps1` 串联、卸载/路径边界测试。
+
+---
+
 ## 本轮已完成（模型页 / 探测）
 
 - **`lib/model-probe.ts`**：直连探测多策略（`max_tokens` → `max_completion_tokens` → 无长度等）；`anthropic-messages` 字符串 content / 块数组多档重试；支持 `overrideApiKey`、`probePresetId`、`customHttp`、`agentId`；合并 `agents/<Agent>/agent/models.json` + `main` + `openclaw.json`。

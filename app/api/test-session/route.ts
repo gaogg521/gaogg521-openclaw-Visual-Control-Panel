@@ -3,9 +3,12 @@ import fs from "fs";
 import path from "path";
 import { OPENCLAW_CONFIG_PATH, OPENCLAW_HOME } from "@/lib/openclaw-paths";
 import { parseApiJsonSafely, shouldFallbackToCli, testSessionViaCli } from "@/lib/session-test-fallback";
+import { enforceLocalRequest } from "@/lib/api-local-guard";
 const CONFIG_PATH = OPENCLAW_CONFIG_PATH;
 
 export async function POST(req: Request) {
+  const guard = enforceLocalRequest(req, "Test session API");
+  if (guard) return guard;
   try {
     const { sessionKey, agentId } = await req.json();
     if (!sessionKey || !agentId) {

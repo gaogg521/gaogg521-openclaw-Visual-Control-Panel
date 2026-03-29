@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { OPENCLAW_CONFIG_PATH, OPENCLAW_HOME } from "@/lib/openclaw-paths";
+import { enforceLocalRequest } from "@/lib/api-local-guard";
 
 function parseSessions(agentId: string) {
   const sessionsPath = path.join(OPENCLAW_HOME, `agents/${agentId}/sessions/sessions.json`);
@@ -20,6 +21,8 @@ function parseSessions(agentId: string) {
 }
 
 export async function POST(req: Request) {
+  const guard = enforceLocalRequest(req, "Chat connect API");
+  if (guard) return guard;
   try {
     const body = await req.json().catch(() => ({}));
     const agentId = String(body?.agentId || "").trim();

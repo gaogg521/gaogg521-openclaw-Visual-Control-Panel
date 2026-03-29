@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { OPENCLAW_CONFIG_PATH, OPENCLAW_HOME } from "@/lib/openclaw-paths";
 import { readJsonFileSync } from "@/lib/json";
+import { execOpenclaw } from "@/lib/openclaw-cli";
 
 function loadConfig(): Record<string, any> {
   try {
@@ -34,6 +35,21 @@ function normalizeModels(cfg: Record<string, any>): { id: string; name: string }
   return out;
 }
 
+function normalizeVersionInfo(raw: string): { version: string; versionDate: string } {
+  const text = raw.trim();
+  const m = text.match(/(\d{4})\.(\d{1,2})\.(\d{1,2})/);
+  if (!m) {
+    return { version: text || "—", versionDate: "" };
+  }
+  const year = m[1];
+  const month = String(Number(m[2]));
+  const day = String(Number(m[3]));
+  return {
+    version: `v${m[1]}.${m[2]}.${m[3]}`,
+    versionDate: `${year}/${month}/${day}`,
+  };
+}
+
 export async function GET(request: Request) {
   try {
     const cfg = loadConfig();
@@ -44,7 +60,25 @@ export async function GET(request: Request) {
     const gatewayUrl = `ws://${host}:${port}`;
 
     let gatewayOnline = false;
-    let openclawVersion = process.env.OPENCLAW_VERSION || "2026.3.8";
+    let openclawVersion = "—";
+    let openclawVersionDate = "";
+    try {
+      const { stdout, stderr } = await execOpenclaw(["--version"], {
+        timeoutMs: 4000,
+        preferExecutable: true,
+      });
+      const line = (stdout || stderr || "").trim().split("\n")[0] || "";
+      const parsed = normalizeVersionInfo(line);
+      openclawVersion = parsed.version;
+      openclawVersionDate = parsed.versionDate;
+    } catch {
+      const envVersion = (process.env.OPENCLAW_VERSION || "").trim();
+      if (envVersion) {
+        const parsed = normalizeVersionInfo(envVersion);
+        openclawVersion = parsed.version;
+        openclawVersionDate = parsed.versionDate;
+      }
+    }
     /**
      * 旧逻辑只打 http://localhost:port/api/health；OpenClaw 2026.3.x 已常无此路由，会误判「离线」。
      * 与 /api/gateway-health 对齐：/api/health → /chat → openclaw gateway status --json
@@ -58,9 +92,13 @@ export async function GET(request: Request) {
         gatewayOnline = true;
         const data = gh.data as Record<string, unknown> | undefined;
         if (data && typeof data.version === "string" && data.version.trim()) {
-          openclawVersion = data.version.trim();
+          const parsed = normalizeVersionInfo(data.version.trim());
+          openclawVersion = parsed.version;
+          if (!openclawVersionDate) openclawVersionDate = parsed.versionDate;
         } else if (typeof gh.openclawVersion === "string" && gh.openclawVersion.trim()) {
-          openclawVersion = gh.openclawVersion.trim();
+          const parsed = normalizeVersionInfo(gh.openclawVersion.trim());
+          openclawVersion = parsed.version;
+          if (!openclawVersionDate) openclawVersionDate = parsed.versionDate;
         }
       }
     } catch {
@@ -101,7 +139,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       version: openclawVersion,
-      version_date: "2026/3/10",
+      version_date: openclawVersionDate,
       gateway_url: gatewayUrl,
       gateway_online: gatewayOnline,
       enabled_channels_count: enabledCount,

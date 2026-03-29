@@ -808,9 +808,15 @@ export default function PixelOfficePage() {
         syncAgentsToOffice(cachedAgents, officeRef.current, agentIdMapRef.current, nextIdRef.current)
       }
     }
+    let cancelled = false
+    let fetchAbort: AbortController | null = null
     const fetchAgents = async () => {
       try {
-        const res = await fetch('/api/agent-activity', { cache: 'no-store' })
+        fetchAbort = new AbortController()
+        const res = await fetch('/api/agent-activity', {
+          cache: 'no-store',
+          signal: fetchAbort.signal,
+        })
         const data = await res.json()
         const newAgents: AgentActivity[] = data.agents || []
         setAgents(newAgents)
@@ -883,12 +889,32 @@ export default function PixelOfficePage() {
         prevAgentStatesRef.current = stateMap
         cachedPrevAgentStates = new Map(stateMap)
       } catch (e) {
+        if (cancelled || (e instanceof Error && e.name === 'AbortError')) return
         console.error('Failed to fetch agents:', e)
       }
     }
-    fetchAgents()
-    const interval = setInterval(fetchAgents, AGENT_ACTIVITY_POLL_INTERVAL_MS)
-    return () => clearInterval(interval)
+    // 原先 setInterval(1s) 不等待 fetch 结束：接口一慢就叠几十上百条并发 /api/agent-activity，
+    // 服务端子进程暴涨；与「后来把 agent-activity 做重」叠加后更明显。此处改为上一轮结束后再间隔。
+    let sleepTimer: ReturnType<typeof setTimeout> | null = null
+    const sleep = (ms: number) =>
+      new Promise<void>((resolve) => {
+        sleepTimer = setTimeout(() => {
+          sleepTimer = null
+          resolve()
+        }, ms)
+      })
+    ;(async () => {
+      while (!cancelled) {
+        await fetchAgents()
+        if (cancelled) break
+        await sleep(AGENT_ACTIVITY_POLL_INTERVAL_MS)
+      }
+    })()
+    return () => {
+      cancelled = true
+      fetchAbort?.abort()
+      if (sleepTimer) clearTimeout(sleepTimer)
+    }
   }, [])
 
   // Poll agent session stats from /api/config
@@ -942,9 +968,26 @@ export default function PixelOfficePage() {
 
   // Poll gateway health for server alarm lamp in Pixel Office
   useEffect(() => {
-    void refreshGatewayHealthSnapshot()
-    const interval = setInterval(refreshGatewayHealthSnapshot, GATEWAY_HEALTH_POLL_INTERVAL_MS)
-    return () => clearInterval(interval)
+    let cancelled = false
+    let sleepTimer: ReturnType<typeof setTimeout> | null = null
+    const sleep = (ms: number) =>
+      new Promise<void>((resolve) => {
+        sleepTimer = setTimeout(() => {
+          sleepTimer = null
+          resolve()
+        }, ms)
+      })
+    ;(async () => {
+      while (!cancelled) {
+        await refreshGatewayHealthSnapshot()
+        if (cancelled) break
+        await sleep(GATEWAY_HEALTH_POLL_INTERVAL_MS)
+      }
+    })()
+    return () => {
+      cancelled = true
+      if (sleepTimer) clearTimeout(sleepTimer)
+    }
   }, [refreshGatewayHealthSnapshot])
 
   useEffect(() => {
@@ -2364,7 +2407,7 @@ export default function PixelOfficePage() {
             <div className={modalOverlayClass} onClick={() => setShowPhonePanel(false)}>
               <div className={modalPanelClass("w-80")} onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between mb-3">
-                  <span className="font-semibold text-[var(--text)]">📱 OpenClaw Latest</span>
+                  <span className="font-semibold text-[var(--text)]">{t('pixelOffice.latestReleaseTitle')}</span>
                   <button onClick={() => setShowPhonePanel(false)} className="text-[var(--text-muted)] hover:text-[var(--text)] text-lg leading-none">×</button>
                 </div>
                 {!info && versionLoading ? (

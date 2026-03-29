@@ -1,0 +1,19 @@
+{
+  "name": "openclaw-lobster-dashboard",
+  "version": "1.0.0",
+  "description": "1ONE 龙虾可视化控制台 — 桌面版",
+  "main": "main.js",
+  "author": "1ONE",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^33.4.0",
+    "electron-builder": "^24.13.3",
+    "png-to-ico": "^3.0.1"
+  }
+}

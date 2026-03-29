@@ -4,7 +4,7 @@
  * - 专家处于 working 时节奏加快、鼓点加密、滤波打开，偏战斗/紧迫风格。
  */
 
-export type ProceduralBgmTheme = 'starship' | 'grove'
+export type ProceduralBgmTheme = 'starship' | 'grove' | 'classic'
 
 let audioCtx: AudioContext | null = null
 let masterGain: GainNode | null = null
@@ -211,12 +211,15 @@ function playArpHit(
   osc.frequency.setValueAtTime(freq, t0)
   const f = ctx.createBiquadFilter()
   f.type = 'lowpass'
-  f.frequency.value = theme === 'starship' ? 2400 : 2000
+  f.frequency.value = theme === 'starship' ? 2400 : theme === 'classic' ? 1700 : 2000
   f.Q.value = 0.6
   const g = ctx.createGain()
   g.gain.setValueAtTime(0.001, t0)
   g.gain.linearRampToValueAtTime(0.09 * vel, t0 + 0.015)
-  g.gain.exponentialRampToValueAtTime(0.001, t0 + (theme === 'starship' ? 0.14 : 0.18))
+  g.gain.exponentialRampToValueAtTime(
+    0.001,
+    t0 + (theme === 'starship' ? 0.14 : theme === 'classic' ? 0.22 : 0.18),
+  )
   osc.connect(f)
   f.connect(g)
   g.connect(master)
@@ -227,7 +230,8 @@ function playArpHit(
 function startDroneAndPad(ctx: AudioContext, master: GainNode, theme: ProceduralBgmTheme, rand: () => number): void {
   const filter = ctx.createBiquadFilter()
   filter.type = 'lowpass'
-  filter.frequency.value = theme === 'starship' ? 340 + rand() * 100 : 420 + rand() * 80
+  filter.frequency.value =
+    theme === 'starship' ? 340 + rand() * 100 : theme === 'classic' ? 380 + rand() * 70 : 420 + rand() * 80
   filter.Q.value = 0.65
 
   if (theme === 'starship') {
@@ -258,7 +262,8 @@ function startDroneAndPad(ctx: AudioContext, master: GainNode, theme: Procedural
       osc.type = 'sine'
       osc.frequency.value = f0 * (0.994 + rand() * 0.012)
       const g = ctx.createGain()
-      g.gain.value = 0.014 + rand() * 0.006
+      g.gain.value =
+        theme === 'classic' ? 0.011 + rand() * 0.005 : 0.014 + rand() * 0.006
       osc.connect(g)
       g.connect(master)
       osc.start()
@@ -268,7 +273,9 @@ function startDroneAndPad(ctx: AudioContext, master: GainNode, theme: Procedural
 }
 
 function startSequencer(ctx: AudioContext, master: GainNode, theme: ProceduralBgmTheme): void {
-  const rand = mulberry32(variationSeed ^ (theme === 'grove' ? 0xface : 0xcafe))
+  const seedXor =
+    theme === 'grove' ? 0xface : theme === 'classic' ? 0xbabe : 0xcafe
+  const rand = mulberry32(variationSeed ^ seedXor)
   const roots =
     theme === 'starship'
       ? [146.83, 174.61, 196.0, 220.0, 246.94, 293.66]
@@ -296,14 +303,19 @@ function startSequencer(ctx: AudioContext, master: GainNode, theme: ProceduralBg
 
     workloadSmoothed += (workloadTarget - workloadSmoothed) * 0.14
 
-    const baseMs = theme === 'starship' ? 118 : 128
-    const fastMs = 62
+    const baseMs = theme === 'starship' ? 118 : theme === 'classic' ? 152 : 128
+    const fastMs = theme === 'classic' ? 78 : 62
+    const drumScale = theme === 'classic' ? 0.52 : 1
+    const workloadScale = theme === 'classic' ? 0.42 : 1
 
     carryMs += dt * 1000
 
     while (carryMs > 0) {
       const phrase = phraseDynamics(step)
-      const energy = Math.min(1, 0.25 + phrase * 0.55 + workloadSmoothed * 0.55)
+      const energy = Math.min(
+        1,
+        0.25 + phrase * 0.55 + workloadSmoothed * 0.55 * workloadScale,
+      )
       const war = energy
       const stepMs = baseMs - (baseMs - fastMs) * war * 0.92
       if (carryMs < stepMs) break
@@ -317,21 +329,42 @@ function startSequencer(ctx: AudioContext, master: GainNode, theme: ProceduralBg
       const sPat = war > 0.45 ? snWar : snSparse
       const hPat = war > 0.5 ? hatWar : hatSparse
 
-      const vDrum = 0.45 + war * 0.95
-      if (kPat[si]) playKick(audioCtx, master, t0, vDrum * (theme === 'grove' ? 0.85 : 1))
+      const vDrum = (0.45 + war * 0.95) * drumScale
+      if (kPat[si])
+        playKick(
+          audioCtx,
+          master,
+          t0,
+          vDrum * (theme === 'grove' ? 0.85 : theme === 'classic' ? 0.75 : 1),
+        )
       if (sPat[si]) playSnare(audioCtx, master, t0, vDrum * 0.95)
-      if (hPat[si]) playHat(audioCtx, master, t0, vDrum * 0.55 * (si % 2 === 0 ? 1 : 0.65), war > 0.65)
+      if (hPat[si])
+        playHat(
+          audioCtx,
+          master,
+          t0,
+          vDrum * 0.55 * (si % 2 === 0 ? 1 : 0.65),
+          war > (theme === 'classic' ? 0.78 : 0.65),
+        )
 
-      if (war > 0.78 && si >= 12) playHat(audioCtx, master, t0 + 0.028, vDrum * 0.35, true)
+      if (war > (theme === 'classic' ? 0.88 : 0.78) && si >= 12)
+        playHat(audioCtx, master, t0 + 0.028, vDrum * 0.35, true)
 
       const bassEvery = war > 0.62 ? 2 : 4
       if (step % bassEvery === 0) {
         const ri = Math.floor((step / bassEvery) % order.length)
-        playBass(audioCtx, master, t0, order[ri] * 0.5, (0.5 + war * 0.5) * (theme === 'grove' ? 0.9 : 1), theme)
+        playBass(
+          audioCtx,
+          master,
+          t0,
+          order[ri] * 0.5,
+          (0.5 + war * 0.5) * (theme === 'grove' ? 0.9 : theme === 'classic' ? 0.72 : 1),
+          theme,
+        )
       }
 
       const arpRoll = rand()
-      const arpChance = 0.28 + war * 0.52
+      const arpChance = theme === 'classic' ? 0.2 + war * 0.38 : 0.28 + war * 0.52
       if (arpRoll < arpChance) {
         const note = order[(step + Math.floor(war * 3)) % order.length] * (si % 4 === 0 ? 1 : 2)
         const stab = si === 0 || si === 8 || (war > 0.72 && (si === 4 || si === 12))

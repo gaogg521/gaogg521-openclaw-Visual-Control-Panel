@@ -1,31 +1,62 @@
-#快速启动办法（中文）
+# 快速启动办法（中文）
+
 ## 0. 指定 OpenClaw 目录（可选）
-若 OpenClaw 不在默认的 `~/.openclaw`，可在项目根目录创建 `.env.local`，写入：
+
+若 OpenClaw 不在默认的 `~/.openclaw`，在**本项目根目录**（`龙虾可视化控制面板` 文件夹）创建 `.env.local`，写入：
+
 ```env
 OPENCLAW_HOME=C:/Users/你的用户名/.openclaw
 ```
+
 （Windows 建议用正斜杠。可复制 `.env.example` 为 `.env.local` 后修改。）
 
-## 1.通过prompt安装
+- **写入配置 / 调 Gateway 报 `spawn openclaw ENOENT`**（常见于从 IDE 启动 `npm run dev`）：在 `.env.local` 配置 `OPENCLAW_CLI` 或 `OPENCLAW_MJS`，见 `.env.example`。
+- **可选 MySQL 镜像**：配置 `MYSQL_HOST` 等，见 `.env.example`；不配也可完整使用仪表盘。
+
+## 1. 仓库路径说明
+
+完整 monorepo 克隆后，仪表盘在子目录 **`软件SOFT/龙虾可视化控制面板`**，请进入该目录再执行 `npm install` / `npm run dev`。
+
+若你**只持有本文件夹**，则直接进入该目录即可。
+
+## 2. 访问地址与界面说明
+
+- 开发/本地生产默认端口：**`3003`**（见 `package.json`）。
+- 浏览器打开：**http://localhost:3003**
+- **语言**：侧栏可选 **简中 / 繁中 / English / 马来语 / 印尼语 / 泰语**（不仅是中英文）。
+- **主题**：侧栏与首页共用 **五套皮肤**（深浅 + 科技蓝 + 暖橙 + 森绿），不仅是「深色/浅色」两种。
+- **极简部署**：装好 `openclaw` 后，在浏览器打开 **`http://localhost:3003/setup`**，按三步向导填写厂商与 API Key（无需手改 env 文件）。
+
+更完整的功能说明见根目录 **[README.md](README.md)**。
+
+## 3. 通过 Prompt 安装
+
 ```
-在openclaw输入如下提示词，让openclaw帮启动：
-请帮我安装并运行这个github项目，并把服务访问地址发给我：https://github.com/gaogg521/Openclaw-SKILLS-OneOne-
+在 OpenClaw 中输入如下提示词，让 OpenClaw 协助安装并启动：
+请帮我安装并运行这个 GitHub 项目，并把服务访问地址发给我：https://github.com/gaogg521/Openclaw-SKILLS-OneOne-
 ```
 
-## 2.通过git安装
-```
+（若对方克隆的是完整仓库，请提醒进入 `软件SOFT/龙虾可视化控制面板` 再 `npm run dev`，访问 **http://localhost:3003**。）
+
+## 4. 通过 Git 安装
+
+```bash
 git clone https://github.com/gaogg521/Openclaw-SKILLS-OneOne-.git
-cd Openclaw-SKILLS-OneOne-
+cd Openclaw-SKILLS-OneOne-/软件SOFT/龙虾可视化控制面板
+
 npm install
 npm run dev
 ```
 
-## 3.通过skill安装
+浏览器访问 **http://localhost:3003**。
+
+## 5. 通过 Skill 安装
+
 ```
 npx clawhub install openclaw-bot-dashboard
 或者：npx skills add gaogg521/openclaw-bot-dashboard
 
-安装后通过这些关键词触发启动服务：
+安装后可通过这些关键词触发启动服务：
 - "打开 OpenClaw-bot-review"
 - "打开 Openclaw dashboard"
 - "打开 bot review"
@@ -34,37 +65,67 @@ npx clawhub install openclaw-bot-dashboard
 - "打开openclaw机器人大盘"
 - "open openclaw dashboard"
 - "open OpenClaw-bot-review"
-- "open openclaw dashsboard"
+- "open openclaw dashboard"
 - "launch bot review"
 - "start dashboard"
-
 ```
 
 ---
 
 # Quick Start (English)
+
 ## 0. Custom OpenClaw path (optional)
-If OpenClaw is not in `~/.openclaw`, create `.env.local` in the project root with:
+
+If OpenClaw is not in `~/.openclaw`, create `.env.local` in **this project root** (the `龙虾可视化控制面板` / dashboard folder) with:
+
 ```env
 OPENCLAW_HOME=C:/Users/YourUsername/.openclaw
 ```
-(Use forward slashes on Windows. You can copy `.env.example` to `.env.local` and edit.)
 
-## 1. Install via Prompt
+(Use forward slashes on Windows. Copy `.env.example` to `.env.local` and edit.)
+
+- If **`spawn openclaw ENOENT`** when saving config or calling the Gateway from IDE-started `npm run dev`, set **`OPENCLAW_CLI`** or **`OPENCLAW_MJS`** in `.env.local` (see `.env.example`).
+- **Optional MySQL** for sync/metrics: set `MYSQL_*` vars; the UI works without it.
+
+## 1. Repository path
+
+After cloning the full monorepo, the dashboard lives under **`软件SOFT/龙虾可视化控制面板`** — `cd` there before `npm install` / `npm run dev`.
+
+If you **only have this folder**, stay in it and run the same commands.
+
+## 2. URL & UI notes
+
+- Default dev/port: **`3003`** (see `package.json`).
+- Open **http://localhost:3003**
+- **Languages**: sidebar offers **zh / zh-TW / en / ms / id / th** — not “Chinese vs English” only.
+- **Themes**: **five skins** (dark, light, cyber blue, warm orange, forest green) — not only two modes.
+- **Quick setup**: With `openclaw` installed, open **`http://localhost:3003/setup`** for a 3-step provider + API key wizard.
+
+Full details: **[README.md](README.md)**.
+
+## 3. Install via Prompt
+
 ```
-In OpenClaw, send the prompt below and let OpenClaw set it up:
+In OpenClaw, send:
 Please help me install and run this GitHub project, and send me the service URL: https://github.com/gaogg521/Openclaw-SKILLS-OneOne-
 ```
 
-## 2. Install via Git
-```
+(If the repo is cloned fully, use folder `软件SOFT/龙虾可视化控制面板`, then `npm run dev` → **http://localhost:3003**.)
+
+## 4. Install via Git
+
+```bash
 git clone https://github.com/gaogg521/Openclaw-SKILLS-OneOne-.git
-cd Openclaw-SKILLS-OneOne-
+cd Openclaw-SKILLS-OneOne-/软件SOFT/龙虾可视化控制面板
+
 npm install
 npm run dev
 ```
 
-## 3. Install via Skill
+Open **http://localhost:3003** in your browser.
+
+## 5. Install via Skill
+
 ```
 npx clawhub install openclaw-bot-dashboard
 or: npx skills add gaogg521/openclaw-bot-dashboard
@@ -78,7 +139,7 @@ After installation, use these trigger phrases to start the service:
 - "打开openclaw机器人大盘"
 - "open openclaw dashboard"
 - "open OpenClaw-bot-review"
-- "open openclaw dashsboard"
+- "open openclaw dashboard"
 - "launch bot review"
 - "start dashboard"
 ```

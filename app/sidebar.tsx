@@ -1,16 +1,27 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useI18n, LanguageSwitcher } from "@/lib/i18n";
 import { ThemeSwitcher } from "@/lib/theme";
 
-const BUGS_ENABLED_KEY = "pixel-office-bugs-enabled";
-const BUGS_COUNT_KEY = "pixel-office-bugs-count";
-const BUGS_MAX = 400;
+/** 透明底品牌图，由 `npm run brand:mark` 从源 PNG 生成 */
+const BRAND_LOGO_SRC = "/brand-mark.png";
+const BRAND_MARK_W = 57;
+const BRAND_MARK_H = 56;
 
-type NavIconName = "agents" | "pixelOffice" | "models" | "sessions" | "stats" | "alerts" | "skills";
+type NavIconName =
+  | "agents"
+  | "pixelOffice"
+  | "models"
+  | "sessions"
+  | "stats"
+  | "alerts"
+  | "skills"
+  | "setup"
+  | "memory";
 type PixelTone = "base" | "shade" | "light";
 type PixelRect = { x: number; y: number; w?: number; h?: number; tone?: PixelTone; opacity?: number };
 type PixelPalette = { base: string; shade: string; light: string };
@@ -27,7 +38,15 @@ function PixelSvg({ pixels, className, palette }: { pixels: PixelRect[]; classNa
       viewBox="0 0 16 16"
       aria-hidden="true"
       className={className}
-      style={{ imageRendering: "pixelated", shapeRendering: "crispEdges" }}
+      style={{
+        imageRendering: "pixelated",
+        shapeRendering: "crispEdges",
+        width: "1rem",
+        height: "1rem",
+        minWidth: "1rem",
+        minHeight: "1rem",
+        display: "block",
+      }}
     >
       {pixels.map((pixel, index) => (
         <rect
@@ -45,9 +64,10 @@ function PixelSvg({ pixels, className, palette }: { pixels: PixelRect[]; classNa
 }
 
 function navPalette(active: boolean): PixelPalette {
+  // 避免使用 color-mix，提升旧浏览器兼容性
   return active
-    ? { base: "var(--accent)", shade: "color-mix(in srgb, var(--accent) 72%, black)", light: "color-mix(in srgb, var(--accent) 55%, white)" }
-    : { base: "var(--text)", shade: "color-mix(in srgb, var(--text) 62%, black)", light: "color-mix(in srgb, var(--text) 35%, white)" };
+    ? { base: "var(--accent)", shade: "var(--accent)", light: "var(--accent)" }
+    : { base: "var(--text)", shade: "var(--text)", light: "var(--text)" };
 }
 
 function NavPixelIcon({ name, active }: { name: NavIconName; active: boolean }) {
@@ -176,6 +196,37 @@ function NavPixelIcon({ name, active }: { name: NavIconName; active: boolean }) 
           ]}
         />
       );
+    case "setup":
+      return (
+        <PixelSvg
+          className={baseClass}
+          palette={palette}
+          pixels={[
+            { x: 7, y: 1, w: 2, h: 2, tone: "light" },
+            { x: 6, y: 3, w: 4, h: 2, tone: "base" },
+            { x: 5, y: 5, w: 6, h: 4, tone: "shade" },
+            { x: 4, y: 9, w: 3, h: 2, tone: "base" },
+            { x: 9, y: 9, w: 3, h: 2, tone: "base" },
+            { x: 7, y: 11, w: 2, h: 3, tone: "light", opacity: 0.9 },
+          ]}
+        />
+      );
+    case "memory":
+      return (
+        <PixelSvg
+          className={baseClass}
+          palette={palette}
+          pixels={[
+            { x: 4, y: 2, w: 8, h: 1, tone: "light" },
+            { x: 3, y: 4, w: 10, h: 1, tone: "base" },
+            { x: 3, y: 6, w: 10, h: 1, tone: "shade" },
+            { x: 3, y: 8, w: 10, h: 1, tone: "base" },
+            { x: 3, y: 10, w: 10, h: 1, tone: "shade" },
+            { x: 5, y: 12, w: 6, h: 1, tone: "light" },
+            { x: 2, y: 3, w: 1, h: 8, tone: "shade", opacity: 0.85 },
+          ]}
+        />
+      );
   }
 }
 
@@ -189,6 +240,12 @@ function NavItemIcon({ name, active }: { name: NavIconName; active: boolean }) {
       }`}
       style={{
         borderRadius: 0,
+        width: "2rem",
+        height: "2rem",
+        minWidth: "2rem",
+        minHeight: "2rem",
+        display: "inline-flex",
+        flexShrink: 0,
         boxShadow: active
           ? "inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -2px 0 rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.04)"
           : "inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -2px 0 rgba(0,0,0,0.1)",
@@ -204,19 +261,23 @@ const NAV_ITEMS: { group: string; items: { href: string; icon: NavIconName; labe
     group: "nav.overview",
     items: [
       { href: "/oneone-dashboard", icon: "stats", labelKey: "nav.oneoneDashboard" },
-      { href: "/", icon: "agents", labelKey: "nav.agents" },
+      { href: "/expert-squad", icon: "agents", labelKey: "nav.agents" },
       { href: "/pixel-office", icon: "pixelOffice", labelKey: "nav.pixelOffice" },
       { href: "/models", icon: "models", labelKey: "nav.models" },
     ],
   },
   {
     group: "nav.oneoneAdmin",
-    items: [{ href: "/channels", icon: "sessions", labelKey: "nav.channels" }],
+    items: [
+      { href: "/channels", icon: "sessions", labelKey: "nav.channels" },
+      { href: "/sessions", icon: "sessions", labelKey: "nav.sessions" },
+      { href: "/memory", icon: "memory", labelKey: "nav.memory" },
+      { href: "/expert-files", icon: "skills", labelKey: "nav.expertFiles" },
+    ],
   },
   {
     group: "nav.monitor",
     items: [
-      { href: "/sessions", icon: "sessions", labelKey: "nav.sessions" },
       { href: "/stats", icon: "stats", labelKey: "nav.stats" },
       { href: "/alerts", icon: "alerts", labelKey: "nav.alerts" },
     ],
@@ -224,6 +285,7 @@ const NAV_ITEMS: { group: string; items: { href: string; icon: NavIconName; labe
   {
     group: "nav.config",
     items: [
+      { href: "/setup", icon: "setup", labelKey: "nav.setupWizard" },
       { href: "/skills", icon: "skills", labelKey: "nav.skills" },
     ],
   },
@@ -236,9 +298,6 @@ export function Sidebar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileAgentCount, setMobileAgentCount] = useState<number | null>(null);
   const [mobileOpenclawVersion, setMobileOpenclawVersion] = useState<string | null>(null);
-  const [experimentOpen, setExperimentOpen] = useState(false);
-  const [bugsEnabled, setBugsEnabled] = useState(false);
-  const [bugsCount, setBugsCount] = useState(5);
   const [logoCarry, setLogoCarry] = useState<{ active: boolean; dx: number; dy: number; angle: number; hidden: boolean }>({
     active: false,
     dx: 0,
@@ -249,7 +308,6 @@ export function Sidebar() {
   const [manualLogoOffset, setManualLogoOffset] = useState<{ dx: number; dy: number }>({ dx: 0, dy: 0 });
   const [manualLogoAngle, setManualLogoAngle] = useState(0);
   const [isLogoDragging, setIsLogoDragging] = useState(false);
-  const bugsEnabledRef = useRef(false);
   const suppressLogoClickRef = useRef(false);
   const dragRef = useRef<{ active: boolean; startX: number; startY: number; originDx: number; originDy: number; moved: boolean; lastX: number; lastY: number }>({
     active: false,
@@ -283,38 +341,6 @@ export function Sidebar() {
   }, []);
 
   useEffect(() => {
-    const syncFromStorage = () => {
-      const enabled = localStorage.getItem(BUGS_ENABLED_KEY) === "true";
-      const raw = Number(localStorage.getItem(BUGS_COUNT_KEY) || "5");
-      const count = Math.max(0, Math.min(BUGS_MAX, Number.isFinite(raw) ? raw : 5));
-      bugsEnabledRef.current = enabled;
-      setBugsEnabled(enabled);
-      setBugsCount(count);
-    };
-    syncFromStorage();
-    window.addEventListener("storage", syncFromStorage);
-    window.addEventListener("openclaw-bugs-config-change", syncFromStorage as EventListener);
-    return () => {
-      window.removeEventListener("storage", syncFromStorage);
-      window.removeEventListener("openclaw-bugs-config-change", syncFromStorage as EventListener);
-    };
-  }, []);
-
-  const toggleBugs = () => {
-    const next = !bugsEnabled;
-    setBugsEnabled(next);
-    localStorage.setItem(BUGS_ENABLED_KEY, String(next));
-    window.dispatchEvent(new CustomEvent("openclaw-bugs-config-change"));
-  };
-
-  const onBugCountChange = (nextCount: number) => {
-    const clamped = Math.max(0, Math.min(BUGS_MAX, nextCount));
-    setBugsCount(clamped);
-    localStorage.setItem(BUGS_COUNT_KEY, String(clamped));
-    window.dispatchEvent(new CustomEvent("openclaw-bugs-config-change"));
-  };
-
-  useEffect(() => {
     const stopDrag = () => {
       if (!dragRef.current.active) return;
       dragRef.current.active = false;
@@ -324,10 +350,6 @@ export function Sidebar() {
     };
     const onMouseMove = (e: MouseEvent) => {
       if (!dragRef.current.active) return;
-      if (bugsEnabledRef.current) {
-        stopDrag();
-        return;
-      }
       const nextDx = dragRef.current.originDx + (e.clientX - dragRef.current.startX);
       const nextDy = dragRef.current.originDy + (e.clientY - dragRef.current.startY);
       if (Math.abs(nextDx - dragRef.current.originDx) > 3 || Math.abs(nextDy - dragRef.current.originDy) > 3) {
@@ -354,7 +376,7 @@ export function Sidebar() {
   }, []);
 
   const handleLogoMouseDown = (e: React.MouseEvent<HTMLSpanElement>) => {
-    if (e.button !== 0 || bugsEnabledRef.current) return;
+    if (e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
     dragRef.current = {
@@ -384,7 +406,7 @@ export function Sidebar() {
 
   const logoTransform = `translate(${manualLogoOffset.dx + logoCarry.dx}px, ${manualLogoOffset.dy + logoCarry.dy}px) rotate(${logoCarry.angle + manualLogoAngle}rad)`;
   const mobileLogoTransform = `translate(${logoCarry.dx}px, ${logoCarry.dy}px) rotate(${logoCarry.angle}rad)`;
-  const logoCursor = !bugsEnabled ? (isLogoDragging ? "grabbing" : "grab") : "default";
+  const logoCursor = isLogoDragging ? "grabbing" : "grab";
   const mobileCurrent = NAV_ITEMS.flatMap((g) => g.items).find((item) =>
     item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
   );
@@ -414,7 +436,7 @@ export function Sidebar() {
         setMobileAgentCount(count);
       } catch {}
     };
-    if (pathname === "/") {
+    if (pathname === "/expert-squad") {
       void fetchAgentCount();
       const timer = setInterval(fetchAgentCount, 30000);
       return () => {
@@ -458,7 +480,7 @@ export function Sidebar() {
               ☰
             </button>
             <Link
-              href="/"
+              href="/oneone-dashboard"
               className="flex items-center gap-2 min-w-0"
               onClickCapture={handleLogoClickCapture}
               onDragStart={handleLogoNativeDragStart}
@@ -470,24 +492,33 @@ export function Sidebar() {
                 onDragStart={handleLogoNativeDragStart}
                 draggable={false}
                 style={{
-                  fontSize: "1.875rem",
                   transform: mobileLogoTransform,
                   transformOrigin: "50% 50%",
                   opacity: logoCarry.hidden ? 0 : 1,
                 }}
               >
-                🦞
+                <Image
+                  src={BRAND_LOGO_SRC}
+                  alt=""
+                  width={BRAND_MARK_W}
+                  height={BRAND_MARK_H}
+                  className="h-9 w-auto max-w-[2.75rem] object-contain select-none pointer-events-none"
+                  draggable={false}
+                  style={{ width: "auto", height: "2.25rem" }}
+                />
               </span>
               <div className="min-w-0">
                 <div className="text-xs font-bold tracking-wide truncate">
                   {pathname.startsWith("/pixel-office")
-                    ? "1One的Openclaw办公室"
-                    : `ONECLAW${mobileOpenclawVersion ? ` ${mobileOpenclawVersion}` : ""}`}
+                    ? t("pixelOffice.title")
+                    : mobileOpenclawVersion
+                      ? `ONE CLAW ${String(mobileOpenclawVersion).replace(/\bOpenClaw\s*/gi, "").trim()}`
+                      : t("site.title")}
                 </div>
                 <div className="text-[10px] text-[var(--text-muted)] truncate">
                   {pathname.startsWith("/pixel-office")
                     ? ""
-                    : pathname === "/" && mobileAgentCount !== null
+                    : pathname === "/expert-squad" && mobileAgentCount !== null
                     ? `${mobileAgentCount} ${t("home.agentCount")}`
                     : mobileCurrent ? t(mobileCurrent.labelKey) : "BOT"}
                 </div>
@@ -509,7 +540,7 @@ export function Sidebar() {
             />
             <aside className="absolute top-0 left-0 bottom-0 w-[276px] max-w-[86vw] border-r border-[var(--border)] bg-[var(--card)] shadow-2xl flex flex-col">
               <div className="h-14 px-3 border-b border-[var(--border)] flex items-center justify-between">
-                <div className="font-semibold text-sm">1one龙虾办公室</div>
+                <div className="font-semibold text-sm">{t("site.title")}</div>
                 <button
                   onClick={() => setMobileMenuOpen(false)}
                   className="w-8 h-8 rounded-lg border border-[var(--border)] bg-[var(--bg)] text-[var(--text)]"
@@ -547,54 +578,6 @@ export function Sidebar() {
                       </div>
                     </div>
                   ))}
-                  <div className="rounded-xl border border-[var(--border)] bg-[var(--card)]/65 p-2">
-                    <button
-                      onClick={() => setExperimentOpen((v) => !v)}
-                      className={`w-full flex items-center justify-between rounded-lg px-3 py-2 transition-colors ${
-                        experimentOpen
-                          ? "bg-[var(--accent)]/12 text-[var(--accent)] border border-[var(--accent)]/35"
-                          : "bg-[var(--bg)] text-[var(--text)] border border-[var(--border)] hover:bg-[var(--accent)]/8"
-                      }`}
-                    >
-                      <span className="flex items-center gap-2">
-                        <span className="text-sm">🧪</span>
-                        <span className="text-sm font-semibold tracking-wide">{t("nav.experiments")}</span>
-                      </span>
-                      <span
-                        className={`inline-flex items-center justify-center text-base leading-none transition-transform ${
-                          experimentOpen ? "text-[var(--accent)] rotate-180" : "text-[var(--text-muted)]"
-                        }`}
-                      >
-                        ⌄
-                      </span>
-                    </button>
-                    {experimentOpen && (
-                      <div className="mt-2 space-y-2 rounded-lg border border-[var(--border)] bg-[var(--card)] p-2">
-                        <button
-                          onClick={toggleBugs}
-                          className={`w-full px-3 py-1.5 text-xs rounded-lg border transition-colors ${
-                            bugsEnabled
-                              ? "bg-[var(--accent)]/10 border-[var(--accent)]/30 text-[var(--accent)]"
-                              : "bg-[var(--card)] border-[var(--border)] text-[var(--text-muted)]"
-                          }`}
-                        >
-                          {bugsEnabled ? `🐛 ${t("nav.bugsOn")}` : `🐛 ${t("nav.bugsOff")}`}
-                        </button>
-                        <label className="flex items-center justify-between gap-2 px-2 py-1.5 text-xs rounded-lg border bg-[var(--card)] border-[var(--border)] text-[var(--text-muted)]">
-                          <span>{t("nav.bugsCount")} {bugsCount}</span>
-                          <input
-                            type="range"
-                            min={0}
-                            max={BUGS_MAX}
-                            step={1}
-                            value={bugsCount}
-                            onChange={(e) => onBugCountChange(Number(e.target.value))}
-                            className="w-24 accent-[var(--accent)]"
-                          />
-                        </label>
-                      </div>
-                    )}
-                  </div>
                 </div>
               </nav>
             </aside>
@@ -610,21 +593,28 @@ export function Sidebar() {
         <div className="border-b border-[var(--border)]" style={{ padding: collapsed ? "16px 0" : "16px 20px" }}>
           {collapsed ? (
             <div className="flex flex-col items-center gap-2">
-              <Link href="/" onClickCapture={handleLogoClickCapture} onDragStart={handleLogoNativeDragStart} draggable={false}>
+              <Link href="/oneone-dashboard" onClickCapture={handleLogoClickCapture} onDragStart={handleLogoNativeDragStart} draggable={false}>
                 <span
                   className="relative inline-block transition-opacity duration-300"
                   onMouseDown={handleLogoMouseDown}
                   onDragStart={handleLogoNativeDragStart}
                   draggable={false}
                   style={{
-                    fontSize: "4.219rem",
                     lineHeight: 1,
                     transform: logoTransform,
                     opacity: logoCarry.hidden ? 0 : 1,
                     cursor: logoCursor,
                   }}
                 >
-                  🦞
+                  <Image
+                    src={BRAND_LOGO_SRC}
+                    alt=""
+                    width={BRAND_MARK_W}
+                    height={BRAND_MARK_H}
+                    className="h-10 w-auto max-w-[2.75rem] object-contain select-none pointer-events-none"
+                    draggable={false}
+                    style={{ width: "auto", height: "2.5rem" }}
+                  />
                 </span>
               </Link>
               <button
@@ -639,7 +629,7 @@ export function Sidebar() {
             <div>
               <div className="flex items-center justify-between">
                 <Link
-                  href="/"
+                  href="/oneone-dashboard"
                   className="flex items-center gap-2"
                   onClickCapture={handleLogoClickCapture}
                   onDragStart={handleLogoNativeDragStart}
@@ -651,17 +641,24 @@ export function Sidebar() {
                     onDragStart={handleLogoNativeDragStart}
                     draggable={false}
                     style={{
-                      fontSize: "4.219rem",
                       lineHeight: 1,
                       transform: logoTransform,
                       opacity: logoCarry.hidden ? 0 : 1,
                       cursor: logoCursor,
                     }}
                   >
-                    🦞
+                    <Image
+                      src={BRAND_LOGO_SRC}
+                      alt=""
+                      width={BRAND_MARK_W}
+                      height={BRAND_MARK_H}
+                      className="h-14 w-auto max-w-[4.5rem] object-contain select-none pointer-events-none"
+                      draggable={false}
+                      style={{ width: "auto", height: "3.5rem" }}
+                    />
                   </span>
                   <div>
-                    <div className="text-sm font-bold text-[var(--text)] tracking-wide">ONECLAW</div>
+                    <div className="text-sm font-bold text-[var(--text)] tracking-wide leading-tight">{t("site.title")}</div>
                     <div className="text-[10px] text-[var(--text-muted)] tracking-wider">BOT</div>
                   </div>
                 </Link>
@@ -719,63 +716,14 @@ export function Sidebar() {
                 </div>
               </div>
             ))}
-            {!collapsed && (
-              <div className="rounded-xl border border-[var(--border)] bg-[var(--card)]/65 p-1">
-                <button
-                  onClick={() => setExperimentOpen((v) => !v)}
-                  className={`w-full flex items-center justify-between rounded-lg px-3 py-2 transition-colors ${
-                    experimentOpen
-                      ? "bg-[var(--accent)]/12 text-[var(--accent)] border border-[var(--accent)]/35"
-                      : "bg-[var(--bg)] text-[var(--text)] border border-[var(--border)] hover:bg-[var(--accent)]/8"
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <span className="text-sm">🧪</span>
-                    <span className="text-sm font-semibold tracking-wide">{t("nav.experiments")}</span>
-                  </span>
-                  <span
-                    className={`inline-flex items-center justify-center text-base leading-none transition-transform ${
-                      experimentOpen ? "text-[var(--accent)] rotate-180" : "text-[var(--text-muted)]"
-                    }`}
-                  >
-                    ⌄
-                  </span>
-                </button>
-                {experimentOpen && (
-                  <div className="mt-2 space-y-2 rounded-lg border border-[var(--border)] bg-[var(--card)] p-2">
-                    <button
-                      onClick={toggleBugs}
-                      className={`w-full px-3 py-1.5 text-xs rounded-lg border transition-colors ${
-                        bugsEnabled
-                          ? "bg-[var(--accent)]/10 border-[var(--accent)]/30 text-[var(--accent)]"
-                          : "bg-[var(--card)] border-[var(--border)] text-[var(--text-muted)]"
-                      }`}
-                    >
-                      {bugsEnabled ? `🐛 ${t("nav.bugsOn")}` : `🐛 ${t("nav.bugsOff")}`}
-                    </button>
-                    <label className="flex items-center justify-between gap-2 px-2 py-1.5 text-xs rounded-lg border bg-[var(--card)] border-[var(--border)] text-[var(--text-muted)]">
-                      <span>{t("nav.bugsCount")} {bugsCount}</span>
-                      <input
-                        type="range"
-                        min={0}
-                        max={BUGS_MAX}
-                        step={1}
-                        value={bugsCount}
-                        onChange={(e) => onBugCountChange(Number(e.target.value))}
-                        className="w-24 accent-[var(--accent)]"
-                      />
-                    </label>
-                  </div>
-                )}
-              </div>
-            )}
             {collapsed && (
               <button
+                type="button"
                 onClick={() => setCollapsed(false)}
-                title={t("nav.experiments")}
+                title={t("nav.expandSidebar")}
                 className="w-full flex items-center justify-center rounded-lg px-2 py-2 text-base border border-[var(--border)] bg-[var(--card)]/65 text-[var(--text)] hover:bg-[var(--bg)] transition-colors"
               >
-                🧪
+                »
               </button>
             )}
           </div>

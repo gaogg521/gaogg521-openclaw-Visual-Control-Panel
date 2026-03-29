@@ -4,6 +4,77 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
 
+type AlertCheckResultItem = {
+  incidentKey: string;
+  message: string;
+  severity?: "critical" | "warning" | "info";
+  agentId?: string;
+  lastActiveAt?: number;
+  sessionRecordMs?: number;
+  dirMtimeMs?: number;
+  gatewayActivityMs?: number;
+};
+
+type AlertIncident = {
+  id: string;
+  incidentKey: string;
+  message: string;
+  agentId?: string;
+  severity: "critical" | "warning" | "info";
+  status: "active" | "acknowledged" | "snoozed" | "recovered";
+  count: number;
+  firstSeenAt: number;
+  lastSeenAt: number;
+  lastStatusChangeAt: number;
+  snoozeUntil?: number;
+};
+
+type AlertSummary = {
+  active: number;
+  acknowledged: number;
+  snoozed: number;
+  recovered: number;
+  critical: number;
+  warning: number;
+  info: number;
+};
+
+function normalizeAlertCheckResults(raw: unknown): AlertCheckResultItem[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((item) => {
+    if (typeof item === "string") return { incidentKey: `legacy:${item}`, message: item };
+    if (
+      item &&
+      typeof item === "object" &&
+      typeof (item as AlertCheckResultItem).message === "string"
+    ) {
+      const o = item as AlertCheckResultItem;
+      return {
+        incidentKey:
+          typeof (o as AlertCheckResultItem).incidentKey === "string"
+            ? (o as AlertCheckResultItem).incidentKey
+            : `legacy:${o.message}`,
+        message: o.message,
+        ...(typeof (o as AlertCheckResultItem).severity === "string"
+          ? { severity: (o as AlertCheckResultItem).severity }
+          : {}),
+        ...(typeof o.agentId === "string" ? { agentId: o.agentId } : {}),
+        ...(typeof o.lastActiveAt === "number" ? { lastActiveAt: o.lastActiveAt } : {}),
+        ...(typeof (o as AlertCheckResultItem).sessionRecordMs === "number"
+          ? { sessionRecordMs: (o as AlertCheckResultItem).sessionRecordMs }
+          : {}),
+        ...(typeof (o as AlertCheckResultItem).dirMtimeMs === "number"
+          ? { dirMtimeMs: (o as AlertCheckResultItem).dirMtimeMs }
+          : {}),
+        ...(typeof (o as AlertCheckResultItem).gatewayActivityMs === "number"
+          ? { gatewayActivityMs: (o as AlertCheckResultItem).gatewayActivityMs }
+          : {}),
+      };
+    }
+    return { incidentKey: `legacy:${String(item)}`, message: String(item) };
+  });
+}
+
 interface AlertRule {
   id: string;
   name: string;
@@ -17,6 +88,9 @@ interface AlertConfig {
   receiveAgent: string;
   rules: AlertRule[];
   checkInterval?: number;
+  incidents?: AlertIncident[];
+  summary?: AlertSummary;
+  snoozeByRuleMinutes?: Record<string, number>;
 }
 
 interface Agent {
@@ -92,9 +166,21 @@ export default function AlertsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [checking, setChecking] = useState(false);
-  const [checkResults, setCheckResults] = useState<string[]>([]);
+  const [checkResults, setCheckResults] = useState<AlertCheckResultItem[]>([]);
+  const [incidents, setIncidents] = useState<AlertIncident[]>([]);
+  const [summary, setSummary] = useState<AlertSummary>({
+    active: 0,
+    acknowledged: 0,
+    snoozed: 0,
+    recovered: 0,
+    critical: 0,
+    warning: 0,
+    info: 0,
+  });
+  const [actingIncidentId, setActingIncidentId] = useState<string | null>(null);
   const [lastCheckTime, setLastCheckTime] = useState<string>("");
   const [checkInterval, setCheckInterval] = useState(10);
+  const [snoozeByRuleMinutes, setSnoozeByRuleMinutes] = useState<Record<string, number>>({});
 
   // 从配置加载 checkInterval
   useEffect(() => {
@@ -265,6 +351,15 @@ export default function AlertsPage() {
       .then(([alertData, configData]) => {
         setConfig(alertData);
         setAgents(configData.agents || []);
+        setIncidents(Array.isArray(alertData?.incidents) ? alertData.incidents : []);
+        setSnoozeByRuleMinutes(
+          alertData?.snoozeByRuleMinutes && typeof alertData.snoozeByRuleMinutes === "object"
+            ? alertData.snoozeByRuleMinutes
+            : {}
+        );
+        if (alertData?.summary) {
+          setSummary(alertData.summary);
+        }
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -279,8 +374,10 @@ export default function AlertsPage() {
       fetch("/api/alerts/check", { method: "POST" })
         .then((r) => r.json())
         .then((data) => {
-          if (data.results && data.results.length > 0) {
-            setCheckResults(data.results);
+          if (data.success) {
+            setCheckResults(normalizeAlertCheckResults(data.results));
+            setIncidents(Array.isArray(data.incidents) ? data.incidents : []);
+            if (data.summary) setSummary(data.summary);
             setLastCheckTime(new Date().toLocaleTimeString(timeLocale));
           }
         })
@@ -291,15 +388,17 @@ export default function AlertsPage() {
     // 只设置定时器，不立即检查
     const timer = setInterval(checkAlerts, checkInterval * 60 * 1000);
     return () => clearInterval(timer);
-  }, [config?.enabled, checkInterval, locale]);
+  }, [config?.enabled, checkInterval, timeLocale]);
 
   const handleManualCheck = () => {
     setChecking(true);
     fetch("/api/alerts/check", { method: "POST" })
       .then((r) => r.json())
       .then((data) => {
-        if (data.results && data.results.length > 0) {
-          setCheckResults(data.results);
+        if (data.success) {
+          setCheckResults(normalizeAlertCheckResults(data.results));
+          setIncidents(Array.isArray(data.incidents) ? data.incidents : []);
+          if (data.summary) setSummary(data.summary);
           setLastCheckTime(new Date().toLocaleTimeString(timeLocale));
         }
       })
@@ -399,6 +498,57 @@ export default function AlertsPage() {
       .finally(() => setSaving(false));
   };
 
+  const handleIncidentAction = async (
+    incidentId: string,
+    action: "ack" | "snooze" | "resolve" | "reopen",
+    minutes?: number,
+  ) => {
+    setActingIncidentId(incidentId);
+    try {
+      const r = await fetch("/api/alerts", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          incidentActions: [{ id: incidentId, action, ...(minutes ? { minutes } : {}) }],
+        }),
+      });
+      if (!r.ok) return;
+      const data = await r.json();
+      setIncidents(Array.isArray(data.incidents) ? data.incidents : []);
+      if (data.summary) setSummary(data.summary);
+      if (config) setConfig({ ...config, incidents: data.incidents, summary: data.summary });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setActingIncidentId(null);
+    }
+  };
+
+  const getRuleIdFromIncidentKey = (incidentKey: string) => {
+    const idx = incidentKey.indexOf(":");
+    return idx > 0 ? incidentKey.slice(0, idx) : incidentKey;
+  };
+
+  const handleRuleSnoozeMinutesChange = (ruleId: string, minutes: number) => {
+    if (!config) return;
+    const safe = Number.isFinite(minutes) ? Math.max(1, Math.floor(minutes)) : 30;
+    const next = { ...snoozeByRuleMinutes, [ruleId]: safe };
+    setSnoozeByRuleMinutes(next);
+    setSaving(true);
+    fetch("/api/alerts", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ snoozeByRuleMinutes: { [ruleId]: safe } }),
+    })
+      .then((r) => r.json())
+      .then((newConfig) => {
+        setConfig(newConfig);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      })
+      .finally(() => setSaving(false));
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -456,7 +606,7 @@ export default function AlertsPage() {
             </button>
           )}
           <Link
-            href="/"
+            href="/expert-squad"
             className="px-4 py-2 rounded-lg bg-[var(--card)] border border-[var(--border)] text-sm hover:border-[var(--accent)] transition"
           >
             {t("common.backHome") || "Back"}
@@ -473,10 +623,39 @@ export default function AlertsPage() {
             </h3>
             {lastCheckTime && <span className="text-xs text-[var(--text-muted)]">{lastCheckTime}</span>}
           </div>
-          <ul className="space-y-1">
-            {checkResults.map((result, i) => (
-              <li key={i} className="text-sm text-yellow-300">• {result}</li>
-            ))}
+          {checkResults.some((r) => typeof r.lastActiveAt === "number" && r.lastActiveAt > 0) && (
+            <p className="text-xs text-[var(--text-muted)] mb-2">{t("alerts.lastActiveNote")}</p>
+          )}
+          <ul className="space-y-2">
+            {checkResults.map((result, i) => {
+              const fmtTs = (ms?: number) =>
+                ms && ms > 0
+                  ? new Date(ms).toLocaleString(timeLocale, {
+                      dateStyle: "short",
+                      timeStyle: "medium",
+                    })
+                  : "—";
+              const hasBreakdown = Boolean(result.agentId);
+              return (
+                <li key={i} className="text-sm text-yellow-300">
+                  <span className="block">• {result.message}</span>
+                  {typeof result.lastActiveAt === "number" && result.lastActiveAt > 0 && (
+                    <span className="block mt-0.5 ml-3 text-xs text-yellow-200/85">
+                      {t("alerts.lastActiveLabel")}{" "}
+                      {fmtTs(result.lastActiveAt)}
+                    </span>
+                  )}
+                  {hasBreakdown && (
+                    <span className="block mt-1 ml-3 text-[11px] leading-snug text-[var(--text-muted)]">
+                      {t("alerts.activitySources")}：{t("alerts.srcSession")}{" "}
+                      {fmtTs(result.sessionRecordMs)} · {t("alerts.srcDirMtime")}{" "}
+                      {fmtTs(result.dirMtimeMs)} · {t("alerts.srcGateway")}{" "}
+                      {fmtTs(result.gatewayActivityMs)}
+                    </span>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
@@ -484,6 +663,109 @@ export default function AlertsPage() {
       {config.enabled && checking && (
         <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--card)] mb-6 text-center text-[var(--text-muted)]">
           {ui.checkingAlerts}
+        </div>
+      )}
+
+      {/* 告警闭环概览 */}
+      {config.enabled && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          <div className="p-3 rounded-lg border border-red-500/30 bg-red-500/10">
+            <div className="text-xs text-[var(--text-muted)]">活跃</div>
+            <div className="text-xl font-semibold text-red-300">{summary.active}</div>
+          </div>
+          <div className="p-3 rounded-lg border border-blue-500/30 bg-blue-500/10">
+            <div className="text-xs text-[var(--text-muted)]">已确认</div>
+            <div className="text-xl font-semibold text-blue-300">{summary.acknowledged}</div>
+          </div>
+          <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10">
+            <div className="text-xs text-[var(--text-muted)]">静默中</div>
+            <div className="text-xl font-semibold text-amber-300">{summary.snoozed}</div>
+          </div>
+          <div className="p-3 rounded-lg border border-green-500/30 bg-green-500/10">
+            <div className="text-xs text-[var(--text-muted)]">已恢复</div>
+            <div className="text-xl font-semibold text-green-300">{summary.recovered}</div>
+          </div>
+        </div>
+      )}
+
+      {/* 告警事件列表（确认 / 静默 / 恢复） */}
+      {config.enabled && incidents.length > 0 && (
+        <div className="p-5 rounded-xl border border-[var(--border)] bg-[var(--card)] mb-6">
+          <h2 className="text-lg font-semibold mb-3">告警事件闭环</h2>
+          <div className="space-y-3 max-h-[360px] overflow-auto pr-1">
+            {incidents.map((incident) => {
+              const sevColor =
+                incident.severity === "critical"
+                  ? "text-red-300 border-red-500/30 bg-red-500/10"
+                  : incident.severity === "warning"
+                    ? "text-amber-300 border-amber-500/30 bg-amber-500/10"
+                    : "text-blue-300 border-blue-500/30 bg-blue-500/10";
+              const statusText =
+                incident.status === "active"
+                  ? "活跃"
+                  : incident.status === "acknowledged"
+                    ? "已确认"
+                    : incident.status === "snoozed"
+                      ? "静默中"
+                      : "已恢复";
+              return (
+                <div key={incident.id} className="p-3 rounded-lg border border-[var(--border)] bg-[var(--bg)]">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-sm">{incident.message}</div>
+                      <div className="mt-1 text-xs text-[var(--text-muted)]">
+                        状态：{statusText} · 触发次数：{incident.count} · 最近触发：
+                        {new Date(incident.lastSeenAt).toLocaleString(timeLocale)}
+                        {incident.agentId ? ` · Agent: ${incident.agentId}` : ""}
+                      </div>
+                      {incident.status === "snoozed" && incident.snoozeUntil ? (
+                        <div className="mt-1 text-xs text-[var(--text-muted)]">
+                          静默至：{new Date(incident.snoozeUntil).toLocaleString(timeLocale)}
+                        </div>
+                      ) : null}
+                    </div>
+                    <span className={`text-[11px] px-2 py-1 rounded border ${sevColor}`}>
+                      {incident.severity}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      onClick={() => void handleIncidentAction(incident.id, "ack")}
+                      disabled={actingIncidentId === incident.id}
+                      className="px-2.5 py-1.5 text-xs rounded border border-[var(--border)] hover:border-[var(--accent)]"
+                    >
+                      确认
+                    </button>
+                    <button
+                      onClick={() =>
+                        void handleIncidentAction(
+                          incident.id,
+                          "snooze",
+                          snoozeByRuleMinutes[getRuleIdFromIncidentKey(incident.incidentKey)] || 30,
+                        )
+                      }
+                      disabled={actingIncidentId === incident.id}
+                      className="px-2.5 py-1.5 text-xs rounded border border-[var(--border)] hover:border-[var(--accent)]"
+                    >
+                      静默（按规则）
+                    </button>
+                    <button
+                      onClick={() =>
+                        void handleIncidentAction(
+                          incident.id,
+                          incident.status === "recovered" ? "reopen" : "resolve",
+                        )
+                      }
+                      disabled={actingIncidentId === incident.id}
+                      className="px-2.5 py-1.5 text-xs rounded border border-[var(--border)] hover:border-[var(--accent)]"
+                    >
+                      {incident.status === "recovered" ? "重新打开" : "标记恢复"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -598,6 +880,17 @@ export default function AlertsPage() {
                     />
                   </div>
                 )}
+              </div>
+              <div className="mt-3 flex items-center gap-2 text-xs text-[var(--text-muted)]">
+                <span>静默时长（分钟）:</span>
+                <input
+                  type="number"
+                  min={1}
+                  value={snoozeByRuleMinutes[rule.id] ?? 30}
+                  onChange={(e) => handleRuleSnoozeMinutesChange(rule.id, Number(e.target.value))}
+                  disabled={!config.enabled || saving}
+                  className="w-20 px-2 py-1 text-sm rounded border border-[var(--border)] bg-[var(--card)] text-[var(--text)] disabled:opacity-50"
+                />
               </div>
               {/* bot_no_response 规则：选择要检测的机器人 */}
               {rule.id === "bot_no_response" && rule.enabled && (

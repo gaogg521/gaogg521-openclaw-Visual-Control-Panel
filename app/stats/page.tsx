@@ -265,7 +265,7 @@ function StatsAgentPicker() {
           </p>
         </div>
         <Link
-          href="/"
+          href="/expert-squad"
           className="px-4 py-2 rounded-lg bg-[var(--card)] border border-[var(--border)] text-sm hover:border-[var(--accent)] transition"
         >
           {t("common.backHome")}

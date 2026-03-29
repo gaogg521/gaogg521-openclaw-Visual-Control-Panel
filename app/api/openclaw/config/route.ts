@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import { OPENCLAW_CONFIG_PATH } from "@/lib/openclaw-paths";
 import { syncOpenclawToMysql } from "@/lib/db-sync";
+import { enforceLocalRequest } from "@/lib/api-local-guard";
 
 const SUPPORTED_TOP_LEVEL_KEYS = new Set([
   "agents",
@@ -46,7 +47,9 @@ function loadConfig(): Record<string, any> {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  const guard = enforceLocalRequest(req, "Openclaw config API");
+  if (guard) return guard;
   try {
     const cfg = loadConfig();
     return NextResponse.json(cfg);
@@ -56,6 +59,8 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
+  const guard = enforceLocalRequest(request, "Openclaw config API");
+  if (guard) return guard;
   try {
     const body = await request.json();
     if (typeof body !== "object" || body === null) {

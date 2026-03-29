@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 
 interface AgentInfo {
@@ -54,6 +54,7 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [messages, setMessages] = useState<ChatItem[]>([]);
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
   const [gatewayWeb, setGatewayWeb] = useState<{ host: string; port: number }>({
     host: "127.0.0.1",
     port: 18789,
@@ -177,6 +178,10 @@ export default function ChatPage() {
     }
   }, [historyKey, messages]);
 
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages.length]);
+
   const sessionOptions = useMemo(() => {
     return sessions.map((s) => ({
       key: s.key,
@@ -241,6 +246,16 @@ export default function ChatPage() {
     }
   }
 
+  const clearCurrentHistory = useCallback(() => {
+    if (!historyKey) return;
+    try {
+      localStorage.removeItem(historyKey);
+    } catch {
+      // ignore
+    }
+    setMessages([]);
+  }, [historyKey]);
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center text-[var(--text-muted)]">加载中...</div>;
   }
@@ -265,7 +280,7 @@ export default function ChatPage() {
             WEB聊天模式
           </a>
           <Link
-            href="/"
+            href="/expert-squad"
             className="px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--card)] text-sm hover:border-[var(--accent)] transition"
           >
             返回首页
@@ -314,7 +329,7 @@ export default function ChatPage() {
             </select>
           </label>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => void connectSession(false)}
@@ -342,16 +357,25 @@ export default function ChatPage() {
           {fastMode && (
             <span className="text-[10px] text-amber-300">轻量会话 · 短回复</span>
           )}
+          <button
+            type="button"
+            onClick={clearCurrentHistory}
+            disabled={messages.length === 0}
+            className="ml-auto px-2.5 py-1.5 rounded-lg border border-[var(--border)] text-xs text-[var(--text-muted)] hover:border-[var(--accent)] disabled:opacity-40"
+            title="清空当前会话在网页中的本地历史（不删除网关真实会话）"
+          >
+            清空本地记录
+          </button>
         </div>
 
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--bg)] p-3 h-[56vh] overflow-auto space-y-1.5">
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--bg)] p-3 h-[56vh] overflow-auto space-y-2">
           {messages.length === 0 ? (
             <div className="text-xs text-[var(--text-muted)]">开始对话吧，消息将通过 Gateway 直接发送到当前选中会话。</div>
           ) : (
             messages.map((m, idx) => (
               <div
                 key={`${m.ts}-${idx}`}
-                className={`max-w-[85%] rounded-lg px-2.5 py-1.5 text-xs leading-5 whitespace-pre-wrap ${
+                className={`max-w-[88%] rounded-xl px-3 py-2 text-sm leading-6 whitespace-pre-wrap shadow-sm ${
                   m.role === "user"
                     ? "ml-auto bg-[var(--accent)]/20 border border-[var(--accent)]/40"
                     : m.role === "assistant"
@@ -361,13 +385,14 @@ export default function ChatPage() {
                       : "mx-auto bg-red-500/15 border border-red-400/30 text-red-200"
                 }`}
               >
-                <div className="text-[9px] opacity-70 mb-0.5">
+                <div className="text-[10px] opacity-70 mb-1">
                   {m.role === "user" ? "你" : m.role === "assistant" ? "专家" : "系统"} · {timeText(m.ts)}
                 </div>
                 <div>{m.content}</div>
               </div>
             ))
           )}
+          <div ref={chatEndRef} />
         </div>
 
         <div className="flex items-end gap-2">

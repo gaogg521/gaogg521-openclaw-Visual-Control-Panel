@@ -4,6 +4,8 @@ import path from 'path'
 import { parseJsonText } from '@/lib/json'
 import { formatAgentDisplayName } from '@/lib/pixel-office/agentDisplayName'
 import { OPENCLAW_AGENTS_DIR, OPENCLAW_CONFIG_PATH, OPENCLAW_HOME } from '@/lib/openclaw-paths'
+import { listRuntimeAgents, resolveAgentSessionsDir } from '@/lib/agent-runtime-paths'
+import { fetchGatewayAgentActivityMap } from '@/lib/gateway-agent-activity-hint'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -13,6 +15,8 @@ const ORPHAN_FALLBACK_WINDOW_MS = 15 * 60 * 1000
 const SUBAGENT_MAX_ACTIVE_MS = 30 * 60 * 1000
 const SUBAGENT_ACTIVITY_EVENT_LIMIT = 6
 const SUBAGENT_ACTIVITY_TEXT_MAX_LEN = 80
+const PER_AGENT_DEEP_PARSE_TIMEOUT_MS = 1200
+const MAX_AGENTS_DEEP_PARSE = 3
 
 type SessionsIndex = Record<string, { sessionId?: string; updatedAt?: number }>
 type CronStoreJob = {
@@ -76,6 +80,9 @@ type AgentConfigEntry = {
   name?: string
   emoji?: string
   identity?: { emoji?: string }
+  agentDir?: string
+  workspace?: string
+  model?: string
 }
 
 async function loadAgentList(config: any, agentsDir: string): Promise<AgentConfigEntry[]> {
@@ -84,6 +91,17 @@ async function loadAgentList(config: any, agentsDir: string): Promise<AgentConfi
     : []
   if (configured.length > 0) return configured
 
+  const runtime = listRuntimeAgents()
+  if (runtime.length > 0) {
+    return runtime.map((a) => ({
+      id: a.id,
+      name: a.name,
+      emoji: a.emoji,
+      model: a.model,
+      agentDir: a.agentDir,
+      workspace: a.workspace,
+    }))
+  }
   try {
     if (!existsSync(agentsDir)) return []
     const dirs = await fs.readdir(agentsDir, { withFileTypes: true })
@@ -769,7 +787,17 @@ async function parseCronJobs(agentSessionsDir: string, cronJobsForAgent: CronSto
   return cronJobs
 }
 
-export async function GET() {
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, fallback: T): Promise<T> {
+  return await Promise.race([
+    promise,
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), timeoutMs)),
+  ])
+}
+
+/** 合并重叠请求：多标签 / 误配轮询时共用一个 in-flight，避免并行 N 份磁盘解析与子进程。 */
+let agentActivityInFlight: Promise<{ agents: AgentActivity[] }> | null = null
+
+async function computeAgentActivityPayload(): Promise<{ agents: AgentActivity[] }> {
   const configPath = OPENCLAW_CONFIG_PATH
   const agentsDir = OPENCLAW_AGENTS_DIR
 
@@ -784,28 +812,39 @@ export async function GET() {
       if (agentList.length > 0) {
         const now = Date.now()
         const liveCronJobs = await loadCronJobs(config)
+        const gwAbort = new AbortController()
+        const gatewayActivity = await Promise.race([
+          fetchGatewayAgentActivityMap({ signal: gwAbort.signal }),
+          new Promise<Map<string, number>>((resolve) => {
+            setTimeout(() => {
+              gwAbort.abort()
+              resolve(new Map())
+            }, 1200)
+          }),
+        ])
+        let deepParseBudget = MAX_AGENTS_DEEP_PARSE
 
         for (const agent of agentList) {
+          let localLastActive = 0
           let lastActive = 0
           let agentSessionsDir = ''
 
-          if (existsSync(agentsDir)) {
-            agentSessionsDir = path.join(agentsDir, agent.id, 'sessions')
-            if (existsSync(agentSessionsDir)) {
-              try {
-                const files = await fs.readdir(agentSessionsDir)
-                for (const file of files) {
-                  const filePath = path.join(agentSessionsDir, file)
-                  const stat = await fs.stat(filePath)
-                  if (stat.mtimeMs > lastActive) {
-                    lastActive = stat.mtimeMs
-                  }
-                }
-              } catch {
-                // Ignore
+          agentSessionsDir = resolveAgentSessionsDir(agent.id)
+          if (existsSync(agentSessionsDir)) {
+            try {
+              const dirStat = await fs.stat(agentSessionsDir)
+              if (dirStat.mtimeMs > localLastActive) localLastActive = dirStat.mtimeMs
+              const sessionsIndexPath = path.join(agentSessionsDir, 'sessions.json')
+              if (existsSync(sessionsIndexPath)) {
+                const idxStat = await fs.stat(sessionsIndexPath)
+                if (idxStat.mtimeMs > localLastActive) localLastActive = idxStat.mtimeMs
               }
+            } catch {
+              // Ignore
             }
           }
+          const gwActive = gatewayActivity.get(agent.id) || 0
+          lastActive = Math.max(localLastActive, gwActive)
 
           let state: 'idle' | 'working' | 'waiting' | 'offline'
           const timeDiff = now - lastActive
@@ -817,15 +856,33 @@ export async function GET() {
             state = 'idle'
           }
 
-          // Parse subagents for online agents
+          // Parse subagents only when local session files are recently active.
+          // This prevents gateway heartbeat from forcing expensive transcript parsing for all agents.
           let subagents: SubagentInfo[] | undefined
           let cronJobs: CronJobInfo[] | undefined
-          if (state !== 'offline' && agentSessionsDir && existsSync(agentSessionsDir)) {
-            subagents = await parseSubagents(agentSessionsDir, agent.id)
+          const shouldParseLocalSessions =
+            localLastActive > 0 &&
+            now - localLastActive <= 30 * 60 * 1000 &&
+            deepParseBudget > 0 &&
+            state !== 'offline' &&
+            agentSessionsDir &&
+            existsSync(agentSessionsDir)
+
+          if (shouldParseLocalSessions) {
+            deepParseBudget -= 1
+            subagents = await withTimeout(
+              parseSubagents(agentSessionsDir, agent.id),
+              PER_AGENT_DEEP_PARSE_TIMEOUT_MS,
+              [],
+            )
             if (subagents.length === 0) subagents = undefined
-            cronJobs = await parseCronJobs(
-              agentSessionsDir,
-              liveCronJobs.filter((job) => inferCronOwnerAgentId(job) === agent.id),
+            cronJobs = await withTimeout(
+              parseCronJobs(
+                agentSessionsDir,
+                liveCronJobs.filter((job) => inferCronOwnerAgentId(job) === agent.id),
+              ),
+              PER_AGENT_DEEP_PARSE_TIMEOUT_MS,
+              [],
             )
             if (cronJobs.length === 0) cronJobs = undefined
           }
@@ -846,8 +903,19 @@ export async function GET() {
     console.error('Error reading agent activity:', error)
   }
 
-  return NextResponse.json(
-    { agents },
-    { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' } },
-  )
+  return { agents }
+}
+
+const AGENT_ACTIVITY_CACHE_HEADERS = {
+  'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+} as const
+
+export async function GET() {
+  if (!agentActivityInFlight) {
+    agentActivityInFlight = computeAgentActivityPayload().finally(() => {
+      agentActivityInFlight = null
+    })
+  }
+  const payload = await agentActivityInFlight
+  return NextResponse.json(payload, { headers: AGENT_ACTIVITY_CACHE_HEADERS })
 }

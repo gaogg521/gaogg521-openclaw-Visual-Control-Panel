@@ -5,6 +5,7 @@ import { clearConfigCache } from "@/lib/config-cache";
 import { callOpenclawGateway, resolveConfigSnapshotHash } from "@/lib/openclaw-cli";
 import { OPENCLAW_AGENTS_DIR } from "@/lib/openclaw-paths";
 import { syncOpenclawToMysql } from "@/lib/db-sync";
+import { enforceLocalRequest } from "@/lib/api-local-guard";
 
 const GATEWAY_CALL_TIMEOUT_MS = 15000;
 const GATEWAY_RECOVERY_TIMEOUT_MS = 45000;
@@ -173,6 +174,8 @@ function clearAgentSessionModelState(agentId: string): void {
 }
 
 export async function PATCH(request: Request) {
+  const guard = enforceLocalRequest(request, "Agent model API");
+  if (guard) return guard;
   try {
     const body = await request.json().catch(() => null);
     const agentId = String(body?.agentId || "").trim();

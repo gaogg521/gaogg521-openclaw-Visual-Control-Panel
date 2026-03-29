@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
+  <title>Loading</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #1a1208;
+      color: #f5a623;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      user-select: none;
+    }
+    .logo { font-size: 48px; margin-bottom: 16px; animation: pulse 1.8s ease-in-out infinite; }
+    .title { font-size: 18px; font-weight: 700; color: #f5a623; letter-spacing: 0.05em; margin-bottom: 8px; }
+    .sub { font-size: 12px; color: #a07030; margin-bottom: 32px; }
+    .bar-wrap {
+      width: 280px; height: 4px;
+      background: #2a1e0a;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .bar {
+      height: 100%;
+      background: linear-gradient(90deg, #f5a623, #ff6b00);
+      border-radius: 2px;
+      animation: load 2.4s ease-in-out infinite;
+    }
+    .hint { margin-top: 20px; font-size: 11px; color: #6b4a1a; }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50%       { transform: scale(1.12); }
+    }
+    @keyframes load {
+      0%   { width: 0%; margin-left: 0; }
+      50%  { width: 70%; margin-left: 15%; }
+      100% { width: 0%; margin-left: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="logo">🦞</div>
+  <div class="title">1ONE 龙虾可视化控制台</div>
+  <div class="sub">ONE CLAW Dashboard</div>
+  <div class="bar-wrap"><div class="bar"></div></div>
+  <div class="hint">正在启动服务，请稍候…</div>
+</body>
+</html>

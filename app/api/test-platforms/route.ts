@@ -12,6 +12,12 @@ const DEFAULT_YUANBAO_API_DOMAIN = "bot.yuanbao.tencent.com";
 const DEFAULT_YUANBAO_WS_URL = "wss://bot-wss.yuanbao.tencent.com/wss/connection";
 const importExternalModule = new Function("modulePath", "return import(modulePath)") as (modulePath: string) => Promise<any>;
 
+function isLocalHost(host: string | null): boolean {
+  if (!host) return false;
+  const h = host.split(":")[0]?.toLowerCase() ?? "";
+  return h === "localhost" || h === "127.0.0.1" || h === "::1" || h === "[::1]";
+}
+
 interface PlatformTestResult {
   agentId: string;
   platform: string;
@@ -1074,7 +1080,15 @@ async function testQqbot(
   }
 }
 
-export async function POST() {
+export async function POST(req: Request) {
+  const host = req.headers.get("host");
+  const allowRemote = process.env.SETUP_ALLOW_REMOTE === "1";
+  if (!allowRemote && !isLocalHost(host)) {
+    return NextResponse.json(
+      { error: "Platform test API is localhost-only.", blocked: true },
+      { status: 403 },
+    );
+  }
   try {
     const raw = fs.readFileSync(CONFIG_PATH, "utf-8");
     const config = JSON.parse(raw);
@@ -1220,6 +1234,6 @@ export async function POST() {
   }
 }
 
-export async function GET() {
-  return POST();
+export async function GET(req: Request) {
+  return POST(req);
 }

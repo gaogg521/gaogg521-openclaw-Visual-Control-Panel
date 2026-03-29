@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useI18n } from "@/lib/i18n";
-import { type Theme, THEME_OPTIONS, useTheme } from "@/lib/theme";
 import { GatewayStatus } from "./gateway-status";
 import {
   AgentCard,
@@ -69,7 +68,6 @@ let cachedHomeAgentStates: Record<string, string> = {};
 
 export default function Home() {
   const { t, locale } = useI18n();
-  const { theme, setTheme } = useTheme();
   const [data, setData] = useState<ConfigData | null>(cachedHomeData);
   const [error, setError] = useState<string | null>(cachedHomeError);
   const [configErrorCode, setConfigErrorCode] = useState<string | null>(null);
@@ -84,9 +82,6 @@ export default function Home() {
   const [sessionTestResults, setSessionTestResults] = useState<Record<string, AgentSessionTestResult | null> | null>(null);
   const [testingSessions, setTestingSessions] = useState(false);
   const [dmSessionResults, setDmSessionResults] = useState<Record<string, PlatformTestResult | null> | null>(null);
-  const [diagnosingClaw, setDiagnosingClaw] = useState(false);
-  const [restartingClaw, setRestartingClaw] = useState(false);
-  const [checkingClawStatus, setCheckingClawStatus] = useState(false);
   const [shellOpen, setShellOpen] = useState(false);
   const [shellTitle, setShellTitle] = useState("命令输出");
   const [shellLines, setShellLines] = useState<string[]>([]);
@@ -355,84 +350,6 @@ export default function Home() {
       });
   }, [data, callTestApi, appendShell, openShell]);
 
-  const runClawDiagnose = useCallback(async () => {
-    setDiagnosingClaw(true);
-    openShell("CLAW诊断", ["$ openclaw doctor --fix", "执行中..."]);
-    try {
-      const res = await fetch("/api/openclaw/doctor", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      const payload = await res.json();
-      if (!res.ok || !payload?.ok) {
-        throw new Error(payload?.error || `HTTP ${res.status}`);
-      }
-      const out = typeof payload?.stdout === "string" ? payload.stdout.trim() : "";
-      const err = typeof payload?.stderr === "string" ? payload.stderr.trim() : "";
-      if (out) appendShell(out);
-      if (err) appendShell(`[stderr] ${err}`);
-      appendShell("诊断完成。");
-    } catch (e: any) {
-      appendShell(`诊断失败: ${e?.message || "未知错误"}`);
-    } finally {
-      setDiagnosingClaw(false);
-      setShellRunning(false);
-    }
-  }, [appendShell, openShell]);
-
-  const viewClawStatus = useCallback(async () => {
-    setCheckingClawStatus(true);
-    openShell("查看 CLAW 状态", ["$ openclaw gateway status", "执行中..."]);
-    try {
-      const res = await fetch("/api/openclaw/gateway-status", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      const payload = await res.json();
-      if (!res.ok || !payload?.ok) {
-        throw new Error(payload?.error || `HTTP ${res.status}`);
-      }
-      const out = typeof payload?.stdout === "string" ? payload.stdout.trim() : "";
-      const err = typeof payload?.stderr === "string" ? payload.stderr.trim() : "";
-      if (out) appendShell(out);
-      if (err) appendShell(`[stderr] ${err}`);
-      appendShell("状态查询完成。");
-    } catch (e: any) {
-      appendShell(`状态查询失败: ${e?.message || "未知错误"}`);
-    } finally {
-      setCheckingClawStatus(false);
-      setShellRunning(false);
-    }
-  }, [appendShell, openShell]);
-
-  const restartOneOneClaw = useCallback(async () => {
-    const ok = window.confirm("确认重启 OneOneClaw 吗？");
-    if (!ok) return;
-    setRestartingClaw(true);
-    openShell("重启 OneOneClaw", ["$ openclaw gateway restart", "执行中..."]);
-    try {
-      const res = await fetch("/api/openclaw/restart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      const payload = await res.json();
-      if (!res.ok || !payload?.ok) {
-        throw new Error(payload?.error || `HTTP ${res.status}`);
-      }
-      const out = typeof payload?.stdout === "string" ? payload.stdout.trim() : "";
-      const err = typeof payload?.stderr === "string" ? payload.stderr.trim() : "";
-      if (out) appendShell(out);
-      if (err) appendShell(`[stderr] ${err}`);
-      appendShell("重启命令已触发，请稍等几秒后再测试。");
-      fetchData(true);
-    } catch (e: any) {
-      appendShell(`重启失败: ${e?.message || "未知错误"}`);
-    } finally {
-      setRestartingClaw(false);
-      setShellRunning(false);
-    }
-  }, [fetchData, appendShell, openShell]);
-
   // 定时刷新
   useEffect(() => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -464,24 +381,92 @@ export default function Home() {
 
   // Agent 任务追踪（子任务 / 定时任务），与仪表盘同源数据
   useEffect(() => {
-    void fetchAgentActivity();
-    const timer = setInterval(() => void fetchAgentActivity(), 30000);
-    return () => clearInterval(timer);
+    let cancelled = false;
+    let sleepTimer: ReturnType<typeof setTimeout> | null = null;
+    const sleep = (ms: number) =>
+      new Promise<void>((resolve) => {
+        sleepTimer = setTimeout(() => {
+          sleepTimer = null;
+          resolve();
+        }, ms);
+      });
+    (async () => {
+      while (!cancelled) {
+        await fetchAgentActivity();
+        if (cancelled) break;
+        await sleep(30000);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (sleepTimer) clearTimeout(sleepTimer);
+    };
   }, [fetchAgentActivity]);
 
   if (error && !data) {
     const isConfigNotFound = configErrorCode === "CONFIG_NOT_FOUND";
     const isConfigParse = configErrorCode === "CONFIG_PARSE_ERROR";
+
+    /* ── ONE CLAW 未安装 → 专属引导页，直接导向 /setup ── */
+    if (isConfigNotFound) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-b from-[#0c0f18] to-[#070910]">
+          <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--card)] p-8 text-center shadow-xl">
+            {/* logo */}
+            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--bg)]/90 shadow-md">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/brand-mark.png" alt="ONE Claw" className="max-h-14 w-auto max-w-[80%] object-contain" />
+            </div>
+
+            <h1 className="text-xl font-bold text-[var(--text)] mb-2">
+              {t("home.notInstalledTitle")}
+            </h1>
+            <p className="text-sm text-[var(--text-muted)] mb-6 leading-relaxed">
+              {t("home.notInstalledSub")}
+            </p>
+
+            {/* 主 CTA：去安装向导 */}
+            <a
+              href="/setup"
+              className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-semibold py-3 px-6 shadow-lg shadow-red-900/30 transition no-underline"
+            >
+              {t("home.notInstalledCta")}
+              <span aria-hidden>→</span>
+            </a>
+
+            {/* 次要：重试（有时用户已安装但路径不对） */}
+            <button
+              onClick={() => fetchData(false)}
+              disabled={loading}
+              className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] py-2.5 text-sm font-medium text-[var(--text-muted)] hover:border-[var(--accent)]/50 transition disabled:opacity-50"
+            >
+              {loading ? t("common.loading") : t("home.notInstalledRetry")}
+            </button>
+
+            {/* 折叠诊断信息 */}
+            <details className="mt-5 text-left group rounded-xl border border-[var(--border)]/80 bg-[var(--bg)]/40 px-3 py-2">
+              <summary className="text-xs text-[var(--text-muted)] cursor-pointer list-none flex items-center justify-between py-1">
+                <span>{t("home.notInstalledDiag")}</span>
+                <span className="text-[var(--text-muted)]/50 group-open:rotate-90 transition-transform">›</span>
+              </summary>
+              <div className="mt-2 pt-2 border-t border-[var(--border)]/60">
+                <p className="font-mono text-[10px] text-red-300/80 break-all whitespace-pre-wrap max-h-32 overflow-auto">{error}</p>
+                <p className="mt-2 text-[10px] text-[var(--text-muted)] leading-relaxed">
+                  {t("home.configNotFoundHint")}
+                </p>
+              </div>
+            </details>
+          </div>
+        </div>
+      );
+    }
+
+    /* ── 其他错误（解析失败等） → 原有错误卡片 ── */
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="max-w-md w-full rounded-xl border border-[var(--border)] bg-[var(--card)] p-6">
           <p className="text-[var(--text)] font-medium mb-2">{t("common.loadError")}</p>
           <p className="text-sm text-[var(--text-muted)] mb-3 break-words">{error}</p>
-          {isConfigNotFound && (
-            <p className="text-xs text-[var(--text-muted)] mb-4 text-left">
-              {t("home.configNotFoundHint")}
-            </p>
-          )}
           {isConfigParse && (
             <p className="text-xs text-[var(--text-muted)] mb-4 text-left">
               {t("home.configParseErrorHint")}
@@ -526,50 +511,13 @@ export default function Home() {
   return (
     <div className="p-3 md:p-4 max-w-6xl mx-auto">
       {/* 头部 */}
-      <div className="flex flex-col gap-2 mb-3 md:flex-row md:items-center md:justify-between">
-        <div className="hidden md:block">
-          <h1 className="text-xl font-bold flex items-center gap-2">
-            🤖 {t("home.pageTitle")}
-          </h1>
-          <p className="text-[var(--text-muted)] text-xs mt-0.5">
-            {t("models.totalPrefix")} {data.agents.length} {t("home.agentCount")} · {t("home.defaultModel")}: {data.defaults.model}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full">
-          <select
-            value={theme}
-            onChange={(e) => setTheme(e.target.value as Theme)}
-            className="shrink-0 px-3 py-2 rounded-lg bg-[var(--card)] border border-[var(--border)] text-[var(--text)] text-sm font-medium hover:border-[var(--accent)] transition cursor-pointer"
-            title="切换皮肤"
-          >
-            {THEME_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                🎨 {opt.label}
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={runClawDiagnose}
-            disabled={diagnosingClaw}
-            className="shrink-0 px-4 py-2 rounded-lg bg-[var(--accent)] border border-[var(--accent)] text-[var(--bg)] text-sm font-medium hover:brightness-110 transition disabled:opacity-50 cursor-pointer"
-          >
-            {diagnosingClaw ? "诊断中..." : "CLAW诊断"}
-          </button>
-          <button
-            onClick={restartOneOneClaw}
-            disabled={restartingClaw}
-            className="shrink-0 px-4 py-2 rounded-lg bg-[var(--accent)] border border-[var(--accent)] text-[var(--bg)] text-sm font-medium hover:brightness-110 transition disabled:opacity-50 cursor-pointer"
-          >
-            {restartingClaw ? "重启中..." : "重启 OneOneClaw"}
-          </button>
-          <button
-            onClick={viewClawStatus}
-            disabled={checkingClawStatus}
-            className="shrink-0 px-4 py-2 rounded-lg bg-[var(--accent)] border border-[var(--accent)] text-[var(--bg)] text-sm font-medium hover:brightness-110 transition disabled:opacity-50 cursor-pointer"
-          >
-            {checkingClawStatus ? "查询中..." : "查看CLAW状态"}
-          </button>
-        </div>
+      <div className="hidden md:block mb-3">
+        <h1 className="text-xl font-bold flex items-center gap-2">
+          🤖 {t("home.pageTitle")}
+        </h1>
+        <p className="text-[var(--text-muted)] text-xs mt-0.5">
+          {t("models.totalPrefix")} {data.agents.length} {t("home.agentCount")} · {t("home.defaultModel")}: {data.defaults.model}
+        </p>
       </div>
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="shrink-0">
