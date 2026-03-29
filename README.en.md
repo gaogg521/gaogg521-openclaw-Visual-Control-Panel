@@ -4,9 +4,7 @@
 
 <div align="center">
 
-<img src="docs/readme-logo.png" alt="ONE CLAW brand mascot" width="168" />
-
-# OpenClaw Dashboard — Lobster visualization console
+<h1><img src="docs/readme-logo.png" alt="" height="44" style="vertical-align: middle;" /> OpenClaw Dashboard — Lobster visualization console</h1>
 
 **1one Lobster Office** — a **full-stack local control plane** for [OpenClaw](https://github.com/openclaw/openclaw), built with [Next.js](https://nextjs.org/): not one screen, but a **coherent toolbox** of dashboards, labs, wizards, and visual surfaces that stay in sync with your real `openclaw.json`, agents, sessions, and gateway.
 
@@ -66,6 +64,8 @@ Polling and OpenClaw CLI usage were tightened so a slow `/api/agent-activity` or
 
 - **Live configuration** — The dashboard still reads **`openclaw.json`**, per-agent dirs, and session files under **`OPENCLAW_HOME`**. The UI does **not** need a database; **MySQL** is optional for sync/metrics only (see below).
 
+<a id="routes"></a>
+
 ## Main routes
 
 | Path | Purpose |
@@ -92,37 +92,153 @@ If you ship a **Windows `.exe` / zip** bundle, see **[packaging/openclaw-oneclic
 
 ## Preview
 
-> **Note:** Full-page UI screenshots are **not embedded** in README anymore (legacy sidebar showed the old lobster/mascot; they will be replaced after the **new logo** ships). Re-export PNGs into [`docs/`](docs/) and add `![](docs/...)` back when ready. Chinese README has the same file checklist.
-
-**File checklist (what each asset is for):**
+Each block below pairs **short copy with a screenshot** so you can map UI to the **[routes / pages](#routes)** table above.
 
 ### Dashboard & expert team
-- `bot_dashboard.png` — main dashboard: gateway, trends, sync, agent tasks, top action bar.
-- `dashboard.png`, `dashboard-preview.jpg` — expert team grid (+ optional session preview popover).
+
+**OneOne dashboard.** Version + gateway health, config paths/ports, global token & latency trends, channel/session mix, recent syncs, agent task status; top bar links for CLAW diagnostics, restart OneOneClaw, and runtime status.
+
+![Main dashboard](docs/bot_dashboard.png)
+
+**Expert team · default grid.** Per-agent online/idle/offline, bound models & platforms (e.g. Feishu), session/message/token counts and mini trend charts.
+
+![Expert team grid](docs/dashboard.png)
+
+**Expert team · wide layout.** Same surface with more horizontal room; may include overlays such as session preview (depends on your exported capture).
+
+![Expert team wide / session preview](docs/dashboard-preview.jpg)
 
 ### Models, sessions, memory
-- `models-preview.png`, `会话列表.png`, `记忆管理.png`
+
+**Models workspace.** Provider/model list, agent bindings, per-model probe, and (after a successful probe) writing `openclaw.json` via the dashboard APIs.
+
+![Models list & probe](docs/models-preview.png)
+
+**Sessions list.** Primary sessions per agent, Feishu/cron-style channels, context usage, and connectivity tests.
+
+![Sessions list](docs/会话列表.png)
+
+**Sessions · alternate view.** Complementary list/detail layout for the same capability at another breakpoint.
+
+![Sessions list (alt)](docs/sessions-preview.png)
+
+**Memory management.** Dual track: Markdown archive + live SQLite, editing `MEMORY.md` and related views.
+
+![Memory management](docs/记忆管理.png)
 
 ### Expert Studio & game scenes
-- `pixel-office.png`, `游戏场景-办公室.png`, `游戏场景-星际剑桥.png`, `游戏场景-蘑菇林地.png`
+
+**Pixel office (Expert Studio).** Map, heatmap, layout tools, and scene switching.
+
+![Pixel office](docs/pixel-office.png)
+
+**Playable scene · office.**
+
+![Game scene · office](docs/游戏场景-办公室.png)
+
+**Playable scene · starship.**
+
+![Game scene · starship](docs/游戏场景-星际剑桥.png)
+
+**Playable scene · grove.**
+
+![Game scene · grove](docs/游戏场景-蘑菇林地.png)
 
 ### Expert roster & files
-- `专家战队.png`, `专家战队2.png`, `专家文件管理.png`, `专家文件管理1.png`
 
-### Expert team chat
-- `快速聊天对话.png`, `快速聊天对话2.png`
+**Expert roster · view A.** Cards for group chat, fallback, cron monitoring, etc.
+
+![Expert roster](docs/专家战队.png)
+
+**Expert roster · view B.** Second capture of the same area for more agents/states.
+
+![Expert roster 2](docs/专家战队2.png)
+
+**Expert files.** Compliance checklist, gap filling, batch actions.
+
+![Expert files](docs/专家文件管理.png)
+
+**Expert files · detail.** Zoomed or follow-up step (pairs with the previous shot).
+
+![Expert files 1](docs/专家文件管理1.png)
+
+### Quick chat
+
+**In-browser chat.** Gateway-backed conversation inside the panel—useful for long replies and formatting checks.
+
+![Quick chat](docs/快速聊天对话.png)
+
+**In-browser chat · follow-up.** Another example (multi-turn or different agent).
+
+![Quick chat 2](docs/快速聊天对话2.png)
 
 ### Diagnostics
-- `claw诊断.png`, `查看claw运行状态.png`
+
+**CLAW diagnostics modal.** Doctor/self-check style output from the dashboard shell.
+
+![Claw diagnostics](docs/claw诊断.png)
+
+**Runtime / gateway status.** Logs or status summary to cross-check with the gateway and local CLI.
+
+![Gateway / runtime status](docs/查看claw运行状态.png)
 
 ### Themes & locales
-- `主题变化.png`, `繁体.png`, `马来语.png`, `印尼语.png`, `泰语.png`
+
+**Theme switcher.** Multiple palettes / light-dark variants from settings or the header.
+
+![Theme switcher](docs/主题变化.png)
+
+**UI locale · Traditional Chinese.**
+
+![Traditional Chinese](docs/繁体.png)
+
+**UI locale · Bahasa Melayu.**
+
+![Malay](docs/马来语.png)
+
+**UI locale · Bahasa Indonesia.**
+
+![Indonesian](docs/印尼语.png)
+
+**UI locale · Thai.**
+
+![Thai](docs/泰语.png)
 
 ### Alerts, models, stats, channels
-- `告警中心.png`, `模型切换.png`, `消息统计.png`, `通道管理.png`
+
+**Alerts.** Rules, history, outbound hooks (e.g. Feishu).
+
+![Alerts](docs/告警中心.png)
+
+**Model switching / routing.** Ops-oriented view of how models are used (per your screenshot).
+
+![Model switcher](docs/模型切换.png)
+
+**Message statistics.** Tokens, volumes, time-series charts.
+
+![Message stats](docs/消息统计.png)
+
+**Channels.** IM/channel configuration and connectivity overview.
+
+![Channels](docs/通道管理.png)
 
 ### Setup wizard
-- `极简的安装.png` … `极简安装4.png`
+
+**`/setup` · step 1.** Precheck / welcome: whether OpenClaw CLI is present, etc.
+
+![Setup step 1](docs/极简的安装.png)
+
+**`/setup` · step 2.** Provider selection and credentials.
+
+![Setup step 2](docs/极简安装2.png)
+
+**`/setup` · step 3.** Confirm and background `openclaw onboard --non-interactive`.
+
+![Setup step 3](docs/极简安装3.png)
+
+**`/setup` · step 4.** Done screen and next-step hints.
+
+![Setup step 4](docs/极简安装4.png)
 
 ### Docs in `docs/` (text)
 - [DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md](docs/DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md) — Windows packaging / installer handoff (zh-CN)  
