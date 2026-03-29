@@ -1,9 +1,22 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
+
+const buildRes = path.join(__dirname, 'build');
+function exists(name) {
+  return fs.existsSync(path.join(buildRes, name));
+}
+
+/** macOS / Linux 打包优先 .icns / .png；Windows 仍用 .ico（见 win.icon） */
+const iconMac = exists('icon.icns') ? 'build/icon.icns' : exists('icon.png') ? 'build/icon.png' : undefined;
+const iconLinux = exists('icon.png') ? 'build/icon.png' : undefined;
+
 /**
  * electron-builder 配置 — ONE Claw 龙虾可视化控制台
- * 多步向导式 NSIS 安装（参考 WorkBuddy 风格）
- * 安装完成后用系统默认浏览器打开 http://localhost:3003/setup 完成初始化
+ * - Windows：多步 NSIS（参考 WorkBuddy）
+ * - macOS：dmg + zip（须在 macOS 上构建）；安装后行为与 Windows 一致（托盘 + 浏览器）
+ * - Linux：AppImage（须在 Linux 上构建）
  */
 module.exports = {
   appId:         'com.openclaw.lobster.dashboard',
@@ -43,9 +56,33 @@ module.exports = {
   // ── Windows ────────────────────────────────────────────────────────────────
   win: {
     target: [{ target: 'nsis', arch: ['x64'] }],
-    icon:   'build/icon.ico',
+    ...(exists('icon.ico') ? { icon: 'build/icon.ico' } : {}),
     signingHashAlgorithms: null,
     sign:   null,
+  },
+
+  // ── macOS（仅能在 darwin 上产出；未放 icon 时使用 Electron 默认图标）────────
+  mac: {
+    target: [
+      { target: 'dmg', arch: ['x64', 'arm64'] },
+      { target: 'zip', arch: ['x64', 'arm64'] },
+    ],
+    category: 'public.app-category.developer-tools',
+    hardenedRuntime: false,
+    identity: null,
+    ...(iconMac ? { icon: iconMac } : {}),
+  },
+
+  dmg: {
+    title: '${productName} ${version}',
+  },
+
+  // ── Linux（AppImage；建议在 Ubuntu 等环境构建）──────────────────────────────
+  linux: {
+    target: ['AppImage'],
+    category: 'Utility',
+    maintainer: '1ONE',
+    ...(iconLinux ? { icon: iconLinux } : {}),
   },
 
   // ── NSIS 多步向导（WorkBuddy 风格） ───────────────────────────────────────
@@ -67,9 +104,10 @@ module.exports = {
     uninstallerSidebar:'build/sidebar.bmp',
     installerHeader:   'build/banner.bmp',
 
-    // ---- 图标 ----
-    installerIcon:    'build/icon.ico',
-    uninstallerIcon:  'build/icon.ico',
+    // ---- 图标（无 icon.ico 时省略，避免 NSIS 报错）----
+    ...(exists('icon.ico')
+      ? { installerIcon: 'build/icon.ico', uninstallerIcon: 'build/icon.ico' }
+      : {}),
 
     // ---- 许可协议页 ----
     license:          'build/license.txt',
@@ -90,6 +128,6 @@ module.exports = {
   publish: null,
 
   // 更新文件是否生成（安装包交付不依赖这些文件）
-  // 注意：历史 .exe 由 build-electron.ps1 统一归档到 dist/releases 保留
+  // 注意：Windows 下 .exe 另由 build-electron.js 归档到 dist/releases
   generateUpdatesFilesForAllChannels: false,
 };

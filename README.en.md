@@ -259,35 +259,41 @@ Both are called “install”, but they **install different stacks**. Suggested 
 | **Includes OpenClaw?** | **No** (you need OpenClaw on the machine, or follow **`/setup`** after the UI is up) | **Yes, when you run the docs**: the flow installs or reuses **openclaw** |
 | **Typical use** | OpenClaw already there; or you install the CLI **yourself** | **Greenfield** or integrators who want **one ordered delivery** for **CLI + panel** |
 
-**Common confusion:** Track **A** on Windows (**NSIS `.exe`**) is **panel only**. Track **B** **wires CLI + panel** — not the same as “only double-click the lobster `.exe`”.
+**Common confusion:** Track **A** **desktop bundles** (Windows **`.exe`**, macOS **`.dmg` / `.zip`**, Linux **AppImage**) are all **panel only** with the same Electron behavior. Track **B** **wires CLI + panel** — not the same as installing only those bundles.
 
 ### Which track?
 
 1. You **already** have `openclaw` and config and you manage the Gateway → **Track A**.  
-2. **Windows**, **no global Node**, you want this repo’s **NSIS installer** → **Track A**.  
+2. **Panel only (any OS):** **Track A**. Choose **① Desktop bundle** (same as Windows: Electron + embedded Node, tray, browser **`/setup`**): on the **target OS** run **`npm run electron:dist`** from the repo root (or `packaging/electron/build-electron.js` / **`build-electron.sh`**), producing **Windows `.exe`**, **macOS `.dmg` / `.zip`**, or **Linux AppImage**; **② From source:** **Node 18+** `npm run dev` / `npm run start`; **③ Docker**.  
 3. **Greenfield** and you will follow **`packaging/openclaw-oneclick/`** end-to-end → **Track B**.
 
 ---
 
 ### Track A — Install the lobster panel only
 
-**“Supported on Windows / macOS / Linux”** means the **Next.js app runs** there. Agents, gateway health, `/setup` writing config still need a valid **`OPENCLAW_HOME`** (with **`openclaw.json`**) and usually a running **Gateway**; install OpenClaw **separately** if needed, or use **`/setup`** plus official docs.
+**All three OSes support “panel only”:** same Next.js app, same Electron **`main.js`** (tray, **`utilityProcess`** standalone server, browser opens **`/setup`** by default), port **3003**. Install either as a **desktop bundle** (no separate Node for end users) or with **local Node / Docker**.
+
+**Native modules:** this app uses **better-sqlite3**. **Always run `npm run build` on the OS you ship for** (or run full **`npm run electron:dist`**, which builds first). **Do not** copy a Windows-built **`.next/standalone`** onto macOS/Linux and package it — the wrong **`.node`** binary will load.
+
+Agents, gateway health, `/setup` writing config still need a valid **`OPENCLAW_HOME`** (with **`openclaw.json`**) and usually a running **Gateway**; install OpenClaw **separately** if needed, or use **`/setup`** plus official docs.
 
 #### Windows
 
 | Role | What to do |
 |------|------------|
-| **End users (no separate Node)** | Install NSIS **`ONE Claw … Setup ….exe`** ([`packaging/electron/build-electron.ps1`](packaging/electron/build-electron.ps1) → [`packaging/electron/dist/`](packaging/electron/dist/)). Electron embeds Node, standalone, port **3003**. See [`packaging/electron/README.md`](packaging/electron/README.md). |
+| **End users (no separate Node)** | Build the installer **on Windows**: from repo root **`npm run electron:dist`**, or [`packaging/electron/build-electron.ps1`](packaging/electron/build-electron.ps1) / [`build-electron.js`](packaging/electron/build-electron.js). Output **NSIS `.exe`** under [`packaging/electron/dist/`](packaging/electron/dist/) (optional copies in **`dist/releases/`**). See [`packaging/electron/README.md`](packaging/electron/README.md). |
 | **Developers** | **Node 18+** → `npm install` → `npm run dev`. |
 | **Local prod / portable** | After **`npm run build`**, run **`npm run start`** (or **`npm run packaging:prepare-standalone`** first; same idea as **`node server.js`** under **`.next/standalone`** with **PORT=3003**). |
 
 #### macOS
 
-No prebuilt **`.dmg` / `.app`** here ([`electron-builder.config.js`](packaging/electron/electron-builder.config.js) is **Windows NSIS only**). Use **Node 18+** + clone + `npm install` / `npm run dev`, or **Docker** (**Docker Deployment** below). For a Mac desktop bundle, add a **`mac`** target in electron-builder and build **on macOS**.
+**Supported.** **Desktop:** on **macOS**, run **`npm run electron:dist`** (or `cd packaging/electron && ./build-electron.sh`). [`electron-builder.config.js`](packaging/electron/electron-builder.config.js) emits **`.dmg` and `.zip`** (x64 + arm64). Behavior matches the Windows installer build. Unsigned builds may require **Open Anyway** in Privacy & Security or right-click → Open. Optional icons: **`packaging/electron/build/icon.icns`** or **`icon.png`** (~512px).  
+**Without desktop bundle:** `npm run dev` / `npm run start`, or **Docker**.
 
 #### Linux (incl. Ubuntu)
 
-Same as macOS: **Node 18+** + source (**nvm** / NodeSource on Ubuntu) or **Docker**. No **AppImage/.deb** by default unless you add a **`linux`** target.
+**Supported.** **Desktop:** on **Linux**, **`npm run electron:dist`** or **`packaging/electron/build-electron.sh`** → **AppImage** by default. Same runtime behavior as Windows. Prefer **nvm** / NodeSource for **Node 18+**. Optional **`packaging/electron/build/icon.png`**.  
+**Without desktop bundle:** **Node** or **Docker**, same as macOS.
 
 **When the panel is up:** open **http://localhost:3003**. Set **`OPENCLAW_HOME`** in **`.env.local`** if not using the default tree (see **Configuration**).
 
@@ -318,7 +324,7 @@ Same as macOS: **Node 18+** + source (**nvm** / NodeSource on Ubuntu) or **Docke
 
 ## Getting Started
 
-**If you have not picked a track yet, read [Installation](#install-guide) first.** Short map: **Windows · panel only · no Node** → Track **A** **`.exe`**; **macOS / Linux · panel only** → Track **A** **Node** or **Docker**; **fresh CLI + panel** → Track **B** **`packaging/openclaw-oneclick/`** (on Windows, read **`WINDOWS_USER_JOURNEY`**).
+**If you have not picked a track yet, read [Installation](#install-guide) first.** Short map: **panel only** → Track **A** (all OSes: **`npm run electron:dist`** for a desktop bundle, or **Node** / **Docker**); **fresh CLI + panel** → Track **B** **`packaging/openclaw-oneclick/`** (on Windows, read **`WINDOWS_USER_JOURNEY`**).
 
 See [Quick Start Guide](quick_start.md) for prompt / git / skill install options.
 

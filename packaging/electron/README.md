@@ -22,31 +22,59 @@ packaging/electron/
 ├── loading.html             # 启动等待动画
 ├── package.json             # electron + electron-builder 依赖
 ├── electron-builder.config.js
-├── build-electron.ps1       # 一键构建脚本
+├── build-electron.js        # 跨平台构建入口（推荐）
+├── build-electron.ps1       # Windows 包装调用 build-electron.js
+├── build-electron.sh        # macOS / Linux 包装
 └── build/
     └── icon.ico             # 应用图标（需手动放置，见下）
 ```
 
-## 快速构建
+## 快速构建（三系统）
+
+主入口为跨平台的 **`build-electron.js`**（`npm run electron:dist` 从**项目根**调用）。**必须在目标操作系统上执行**（含 `npm run build`），以便 **better-sqlite3** 等原生模块与当前平台一致。
+
+**Windows**
 
 ```powershell
-cd packaging\electron
-.\build-electron.ps1
-# 产物在 packaging\electron\dist\*.exe
+cd <项目根目录>
+npm run electron:dist
+# 或 cd packaging\electron 后 .\build-electron.ps1
 ```
 
-已有最新 standalone 时跳过 Next.js 构建（更快）：
-```powershell
-.\build-electron.ps1 -SkipNextBuild
+**macOS / Linux**
+
+```bash
+cd <项目根目录>
+npm run electron:dist
+# 或 cd packaging/electron && chmod +x build-electron.sh && ./build-electron.sh
+```
+
+- **Windows** 产物：**NSIS `.exe`**（`dist/`，可选归档 `dist/releases/`）  
+- **macOS** 产物：**`.dmg`**、**`.zip`**（x64 / arm64）  
+- **Linux** 产物：**AppImage**
+
+已有最新 **`.next/standalone`** 时跳过 Next 构建：
+
+```bash
+npm run electron:dist:skip-next
+# 或 node packaging/electron/build-electron.js --skip-next-build
+```
+
+显式指定 electron-builder 目标（一般不必）：
+
+```bash
+node packaging/electron/build-electron.js -- --win
+node packaging/electron/build-electron.js -- --mac
+node packaging/electron/build-electron.js -- --linux
 ```
 
 ## 图标（可选但推荐）
 
-将 256×256 PNG 转为 `.ico` 文件，放到：
-```
-packaging/electron/build/icon.ico
-```
-可使用在线工具 [favicon.io](https://favicon.io/favicon-converter/) 或 ImageMagick：
+- **Windows / NSIS：** `packaging/electron/build/icon.ico`（多尺寸 `.ico`）  
+- **macOS：** `icon.icns`，或 **`icon.png`**（约 512×512，electron-builder 可转换）  
+- **Linux / 托盘：** `icon.png` 优先（`main.js` 在 Mac/Linux 托盘会优先找 `.icns` / `.png`）
+
+生成 `.ico` 示例（ImageMagick）：
 ```bash
 magick convert icon-256.png -define icon:auto-resize=256,128,64,48,32,16 icon.ico
 ```

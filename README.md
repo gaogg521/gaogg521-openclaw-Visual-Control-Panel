@@ -27,7 +27,7 @@
 
 ---
 
-> **不想先啃长文档？** **Windows** 可装 **NSIS `.exe`**（内嵌 Node，自动起 **3003**）；**Mac / Linux** 用 **Node 18+** 执行 `npm run dev` 或 **Docker**。完整能力依赖本机 **OpenClaw**；**「只装面板」** 与 **「OpenClaw + 龙虾一键流水线」** 两条路线见下文 **[安装说明](#install-guide)**。
+> **不想先啃长文档？** **只装面板** 三系统一致：**Windows** 可装 **NSIS `.exe`**；**macOS** 可在本机打 **`.dmg` / `.zip`**；**Linux** 可打 **AppImage**（均为 Electron、内嵌 Node、默认 **3003**，与源码跑同一套 `main.js`）。也可不装桌面包，直接用 **Node 18+**（`npm run dev` / `npm run start`）或 **Docker**。完整能力仍依赖本机 **OpenClaw**；与 **「OpenClaw + 龙虾一键流水线」** 的差别见 **[安装说明](#install-guide)**。
 
 ### ✨ 为什么选这套控制台？
 
@@ -288,35 +288,41 @@
 | **是否自带 OpenClaw** | **否**（需本机另有 OpenClaw，或起面板后按 **`/setup`** 引导） | **按文档执行**：流程里会装或复用 **openclaw** |
 | **典型场景** | 已有 OpenClaw；或 **自己** 用官方方式装 CLI | **新环境**、**集成商** 要一条固定顺序交付 **CLI + 面板** |
 
-**易混点：** **路线 A** 里的 Windows **NSIS `.exe`** = **只装面板**。**路线 B** = **CLI 与面板按脚本串起来**，和「只双击装龙虾 `.exe`」**不是同一条路**。
+**易混点：** **路线 A** 的 **桌面包**（Win **`.exe`** / Mac **`.dmg`**·`.zip` / Linux **AppImage**）都是 **只装面板**、同一套 Electron 行为。**路线 B** = **CLI 与面板按脚本串起来**，和「只装上述桌面包」**不是同一条路**。
 
 ### 我该选哪条？
 
 1. 机器上 **已有** `openclaw` 与配置，只要自己管网关 → **路线 A**。  
-2. **Windows**、**不想装 Node**、要本仓库打的 **NSIS 安装包** → **路线 A**。  
+2. **只要面板（任意系统）：** **路线 A**。可选 **① 桌面包**（与 Windows 同等：Electron 内嵌 Node、托盘、浏览器开 **`/setup`**）：在 **对应系统上** 于项目根执行 **`npm run electron:dist`**（或 `packaging/electron/build-electron.js` / `.sh`），产出 **Windows `.exe` / macOS `.dmg`·`.zip` / Linux AppImage**；**② 源码跑**：**Node 18+** 的 `npm run dev` / `npm run start`；**③ Docker**。  
 3. **从零搭一套**，愿意按 **`packaging/openclaw-oneclick/`** 里的顺序走 → **路线 B**。
 
 ---
 
 ### 路线 A — 独立安装龙虾面板
 
-**「支持 Windows / macOS / Linux」** 指：**这套 Next 应用能在该系统上跑**。读 Agent、网关健康、`/setup` 写配置等，仍需要合法的 **`OPENCLAW_HOME`**（含 **`openclaw.json`**）且通常需要 **网关**；若还没有，请 **单独安装** 官方 OpenClaw，或先起面板再跟 **`/setup`** 与官方文档补齐。
+**三系统均支持「只装面板」：** 同一套 Next 应用 + 同一套 Electron **`main.js`**（托盘、**`utilityProcess`** 起 standalone、浏览器默认打开 **`/setup`**），默认端口 **3003**。安装形态可选：**桌面包**（内嵌 Node，用户不必单独装 Node）或 **本机 Node / Docker**。
+
+**重要（原生模块）：** 项目依赖 **better-sqlite3** 等原生绑定。**打桌面包或生产 standalone 时，必须在目标操作系统上执行 `npm run build`**（直接跑 `npm run electron:dist` 会在本机先 build）。勿把在 Windows 上构建的 `.next/standalone` 复制到 Mac/Linux 再打包，否则运行时会加载错平台的 `.node`。
+
+读 Agent、网关健康、`/setup` 写配置等，仍需要合法的 **`OPENCLAW_HOME`**（含 **`openclaw.json`**）且通常需要 **网关**；若还没有，请 **单独安装** 官方 OpenClaw，或先起面板再跟 **`/setup`** 与官方文档补齐。
 
 #### Windows
 
 | 角色 | 做法 |
 |------|------|
-| **最终用户（不必单独装 Node）** | 安装 NSIS **`ONE Claw … Setup ….exe`**（[`packaging/electron/build-electron.ps1`](packaging/electron/build-electron.ps1) → [`packaging/electron/dist/`](packaging/electron/dist/)）。Electron 内嵌 Node，standalone，端口 **3003**。说明见 [`packaging/electron/README.md`](packaging/electron/README.md)。 |
+| **最终用户（不必单独装 Node）** | 在 **Windows** 上构建安装包：项目根 **`npm run electron:dist`**，或 [`packaging/electron/build-electron.ps1`](packaging/electron/build-electron.ps1) / [`build-electron.js`](packaging/electron/build-electron.js)。产物 **NSIS `.exe`** 在 [`packaging/electron/dist/`](packaging/electron/dist/)（历史版本可归档在 `dist/releases/`）。说明见 [`packaging/electron/README.md`](packaging/electron/README.md)。 |
 | **开发者** | **Node 18+** → `npm install` → `npm run dev`。 |
-| **本机生产 / 绿色部署** | `npm run build` 后 **`npm run start`**（或 `npm run packaging:prepare-standalone`，等价于含 build 的 standalone；与 `.next/standalone` 下 **`node server.js`** 且 **PORT=3003** 一致）。 |
+| **本机生产 / 绿色部署** | `npm run build` 后 **`npm run start`**（或 `npm run packaging:prepare-standalone`；与 `.next/standalone` 下 **`node server.js`** 且 **PORT=3003** 一致）。 |
 
 #### macOS
 
-本仓库 **未** 提供现成 **`.dmg` / `.app`**（[`electron-builder.config.js`](packaging/electron/electron-builder.config.js) 当前仅 **Windows NSIS**）。请 **Node 18+** + 克隆 + `npm install` / `npm run dev`，或 **Docker**（见下文 **Docker 部署**）。需要 Mac 桌面包时，在 macOS 上为 electron-builder 增加 **`mac`** 目标后自行构建。
+**支持。** **桌面包：** 在 **macOS 本机** 项目根执行 **`npm run electron:dist`**（或 `cd packaging/electron && ./build-electron.sh`），[`electron-builder.config.js`](packaging/electron/electron-builder.config.js) 会产出 **`.dmg` 与 `.zip`**（x64 / arm64）。行为与 Windows 安装版一致（内嵌 Node、托盘、浏览器 **`/setup`**）。未签名应用首次打开可能需在「隐私与安全性」中放行或使用右键打开。可选在 `packaging/electron/build/` 放置 **`icon.icns`** 或 **`icon.png`**（512×512 级）作为应用与托盘图标。  
+**不用桌面包：** `npm run dev` / `npm run start`，或 **Docker 部署**。
 
 #### Linux（含 Ubuntu）
 
-与 macOS 相同：**Node 18+** + 源码（Ubuntu 建议 **nvm** / **NodeSource**，勿依赖过旧的 `apt nodejs`）或 **Docker**。默认 **不** 产出 AppImage / `.deb`；需要时在 electron-builder 增加 **`linux`** 目标自行打包。
+**支持。** **桌面包：** 在 **Linux 本机** 项目根 **`npm run electron:dist`**（或 `packaging/electron/build-electron.sh`），默认产出 **AppImage**（[`electron-builder.config.js`](packaging/electron/electron-builder.config.js)）。行为同样与 Windows 一致。建议 **nvm** / **NodeSource** 安装 **Node 18+**（勿用过旧的 `apt nodejs`）。可选 `packaging/electron/build/icon.png` 作为图标。  
+**不用桌面包：** 与 macOS 相同，**Node** 或 **Docker**。
 
 **面板起来之后：** 浏览器打开 **http://localhost:3003**。配置目录非默认时，在项目根 **`.env.local`** 设置 **`OPENCLAW_HOME`**（见 **自定义配置路径**）。
 
@@ -349,7 +355,7 @@
 
 ## 快速开始
 
-**还没选定路线时，请先读 [安装说明](#install-guide)。** 选定后的速查：**Windows · 只要面板 · 不想装 Node** → 路线 A 的 **`.exe`**；**Mac / Linux · 只要面板** → 路线 A 的 **Node** 或 **Docker**；**从零装 CLI + 面板** → 路线 B 的 **`packaging/openclaw-oneclick/`**（Windows 务必读 **`WINDOWS_USER_JOURNEY`**）。
+**还没选定路线时，请先读 [安装说明](#install-guide)。** 选定后的速查：**只要面板** → 路线 A（三系统均可 **`npm run electron:dist`** 打桌面包，或 **Node** / **Docker** 直接跑）；**从零装 CLI + 面板** → 路线 B 的 **`packaging/openclaw-oneclick/`**（Windows 务必读 **`WINDOWS_USER_JOURNEY`**）。
 
 更多方式（提示词 / Skill 等）见：[快速启动文档](quick_start.md)。
 

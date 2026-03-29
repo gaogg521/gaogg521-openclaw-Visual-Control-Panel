@@ -12,6 +12,8 @@
     "generate-pixel-assets": "node scripts/generate-pixel-office-assets.mjs",
     "i18n:merge-sea": "node scripts/merge-sea-chunks.mjs",
     "packaging:prepare-standalone": "npm run build",
+    "electron:dist": "node packaging/electron/build-electron.js",
+    "electron:dist:skip-next": "node packaging/electron/build-electron.js --skip-next-build",
     "brand:mark": "node scripts/process-brand-mark.mjs"
   },
   "dependencies": {

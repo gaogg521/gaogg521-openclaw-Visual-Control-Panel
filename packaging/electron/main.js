@@ -52,7 +52,19 @@ function getStandaloneDir() {
 }
 
 function getIconPath() {
-  return path.join(__dirname, 'build', 'icon.ico');
+  const buildDir = path.join(__dirname, 'build');
+  const candidates = [];
+  if (process.platform === 'darwin') {
+    candidates.push(path.join(buildDir, 'icon.icns'), path.join(buildDir, 'icon.png'));
+  } else if (process.platform === 'linux') {
+    candidates.push(path.join(buildDir, 'icon.png'), path.join(buildDir, 'icon.ico'));
+  } else {
+    candidates.push(path.join(buildDir, 'icon.ico'), path.join(buildDir, 'icon.png'));
+  }
+  for (const p of candidates) {
+    if (fs.existsSync(p)) return p;
+  }
+  return path.join(buildDir, 'icon.ico');
 }
 
 function initLogPaths() {
