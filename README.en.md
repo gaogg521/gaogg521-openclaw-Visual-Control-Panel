@@ -2,9 +2,15 @@
 
 ---
 
+<div align="center">
+
+<img src="docs/readme-logo.png" alt="ONE CLAW brand mascot" width="168" />
+
 # OpenClaw Dashboard — Lobster visualization console
 
 **1one Lobster Office** — a **full-stack local control plane** for [OpenClaw](https://github.com/openclaw/openclaw), built with [Next.js](https://nextjs.org/): not one screen, but a **coherent toolbox** of dashboards, labs, wizards, and visual surfaces that stay in sync with your real `openclaw.json`, agents, sessions, and gateway.
+
+</div>
 
 ## Capability map — what ships in this repo
 
@@ -86,76 +92,37 @@ If you ship a **Windows `.exe` / zip** bundle, see **[packaging/openclaw-oneclic
 
 ## Preview
 
-All screenshots below live in **[`docs/`](docs/)** (paths are relative to this README). Captions match the **current** UI in those assets (filenames like `dashboard.png` are historical — the image may show **专家战队** rather than the numeric home page).
+> **Note:** Full-page UI screenshots are **not embedded** in README anymore (legacy sidebar showed the old lobster/mascot; they will be replaced after the **new logo** ships). Re-export PNGs into [`docs/`](docs/) and add `![](docs/...)` back when ready. Chinese README has the same file checklist.
 
-### Dashboard hub & expert team overview
-**`bot_dashboard.png`** — OneOne **dashboard** (`/`): version & gateway cards, config path & ports, **global token / latency trends**, channel & session-type breakdown, recent **storage sync** runs, **agent task tracking**; top bar **CLAW 诊断**, **重启 OneOneClaw**, **查看 CLAW 状态**.
+**File checklist (what each asset is for):**
 
-**`dashboard.png` / `dashboard-preview.jpg`** — **Expert team** grid: each card shows online/idle/offline, bound **model**, **Feishu/Lark** link, sessions/messages/tokens, sparklines; wide shot may show **会话预览** (DM/group list with token hints).
+### Dashboard & expert team
+- `bot_dashboard.png` — main dashboard: gateway, trends, sync, agent tasks, top action bar.
+- `dashboard.png`, `dashboard-preview.jpg` — expert team grid (+ optional session preview popover).
 
-![OneOne dashboard — gateway, trends, distribution, agent tasks](docs/bot_dashboard.png)
-![Expert team — per-agent cards, models, platforms, metrics](docs/dashboard.png)
-![Expert team — wide grid / session preview popover](docs/dashboard-preview.jpg)
+### Models, sessions, memory
+- `models-preview.png`, `会话列表.png`, `记忆管理.png`
 
-### Models, sessions & memory
-**Models** — **接入模型列表**: primary & fallback models, **which agents use which model**, probe presets, temporary API key, **probe → write `openclaw.json`**, provider table (e.g. LiteLLM). **Sessions** — pick an agent, list **main / Feishu group & DM / cron** keys, context **used / limit %**, per-session **测试**. **Memory** — **Markdown 归档** vs **SQLite 实时**, shows `memory/*.sqlite`, `workspace/agents`, `MEMORY.md` editor with save.
+### Expert Studio & game scenes
+- `pixel-office.png`, `游戏场景-办公室.png`, `游戏场景-星际剑桥.png`, `游戏场景-蘑菇林地.png`
 
-![Model list — providers, agent binding, add model & probe](docs/models-preview.png)
-![Session list — agent-scoped keys, Feishu/cron, context %, test](docs/会话列表.png)
-![Memory — dual paths, Markdown editor for agent MEMORY.md](docs/记忆管理.png)
+### Expert roster & files
+- `专家战队.png`, `专家战队2.png`, `专家文件管理.png`, `专家文件管理1.png`
 
-### Expert Studio (pixel map) & three game scenes
-**`pixel-office.png`** — **专家工作室** canvas: top-down **pixel “office”**, **game scene** dropdown (e.g. **星际舰桥**), expert **nameplates** (working / 摸鱼 / 下班), optional SRE mascot. The three images below are **经典办公室 / 星际舰桥 / 蘑菇林地** art packs.
+### Expert team chat
+- `快速聊天对话.png`, `快速聊天对话2.png`
 
-![Expert Studio — pixel map, scene switch, expert status HUD](docs/pixel-office.png)
-![Game scene — classic office layout & original assets](docs/游戏场景-办公室.png)
-![Game scene — starship bridge, space backdrop](docs/游戏场景-星际剑桥.png)
-![Game scene — mushroom grove, forest stream tiles](docs/游戏场景-蘑菇林地.png)
+### Diagnostics
+- `claw诊断.png`, `查看claw运行状态.png`
 
-### Expert roster & workspace file compliance
-**Expert squad** — grid of specialists with refresh interval, **我要聊天**, default model line. **Alternate** adds **群聊卡片**, **Fallback 模型**, **Agent 任务监控** (cron rows, pass/fail). **Expert files** — per-agent required markdown set (IDENTITY, MEMORY, ROLE…), **compliance %**, one-click **补全缺失模块**.
+### Themes & locales
+- `主题变化.png`, `繁体.png`, `马来语.png`, `印尼语.png`, `泰语.png`
 
-![Expert squad — cards, refresh, default model](docs/专家战队.png)
-![Expert squad — group bindings, fallback models, cron monitor](docs/专家战队2.png)
-![Expert files — checklist, missing ROLE.md, deploy actions](docs/专家文件管理.png)
-![Expert files — alternate compliance view](docs/专家文件管理1.png)
+### Alerts, models, stats, channels
+- `告警中心.png`, `模型切换.png`, `消息统计.png`, `通道管理.png`
 
-### Expert team chat (browser)
-Pick **专家 + 会话**, **连接会话**, optional **极速模式** (lighter replies). Transcript can include long **status / briefing** bubbles from the commander agent. **清空本地记录** only clears **browser-local** chat history.
-
-![Expert chat — session ready, commander reply stream](docs/快速聊天对话.png)
-![Expert chat — long operational report in thread](docs/快速聊天对话2.png)
-
-### CLAW diagnostics & gateway status (from dashboard)
-**CLAW 诊断** — modal with terminal-style **`openclaw doctor`** output: gateway WS URL, **port-in-use** + **PID** (e.g. `node.exe`). **查看 CLAW 状态** — **`openclaw gateway status`**-style log, RPC probe notes, stderr, **docs.openclaw.ai/troubleshooting** link.
-
-![CLAW diagnosis modal — doctor output, port conflict](docs/claw诊断.png)
-![Gateway status modal — runtime log, PID, troubleshooting](docs/查看claw运行状态.png)
-
-### Themes & locales (5 themes · 6 UI languages)
-Sidebar **language** + **`data-theme`** skins (e.g. 橙色暖调, 极简暗黑); samples below include **Traditional Chinese** and SEA locales.
-
-![Theme selector — warm orange shell](docs/主题变化.png)
-![UI — Traditional Chinese](docs/繁体.png)
-![UI — Malay](docs/马来语.png)
-![UI — Indonesian](docs/印尼语.png)
-![UI — Thai](docs/泰语.png)
-
-### Alerts, model switch, stats, channels
-**Alerts** — enable switch, **which experts receive** notifications, rules: **model probe fail**, **bot silent** (seconds threshold), **high message failure rate**, **cron consecutive failures**, silence window. Other pages: per-card **切换模型**, **消息统计** charts, **通道** table.
-
-![Alert center — rules, expert recipients, intervals](docs/告警中心.png)
-![Per-agent model switch / binding UI](docs/模型切换.png)
-![Message statistics — token & latency trends](docs/消息统计.png)
-![Channel management — bindings overview](docs/通道管理.png)
-
-### Setup wizard (minimal install / 极简安装)
-**Step 1** — welcome card: **CLI detected** (version/git), five-step path **提供商 → 密钥 → 确认 → Gateway**; keys **stay on machine**. Later steps: provider, key, confirm, finish (see `极简安装2–4`).
-
-![Setup — CLI precheck, welcome, start configuration](docs/极简的安装.png)
-![Setup wizard — provider / key step](docs/极简安装2.png)
-![Setup wizard — confirm summary](docs/极简安装3.png)
-![Setup wizard — done / gateway check](docs/极简安装4.png)
+### Setup wizard
+- `极简的安装.png` … `极简安装4.png`
 
 ### Docs in `docs/` (text)
 - [DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md](docs/DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md) — Windows packaging / installer handoff (zh-CN)  

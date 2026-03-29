@@ -1,6 +1,8 @@
 <div align="center">
 
-# 🦞 ONE CLAW 龙虾可视化控制台
+<img src="docs/readme-logo.png" alt="ONE CLAW 品牌形象" width="168" />
+
+# ONE CLAW 龙虾可视化控制台
 
 **本地优先的 OpenClaw 可视化工具箱** — 仪表盘 · 专家战队 · 像素工作室 · 模型探测 · 极简部署，全部对齐本机 `openclaw.json` 与 Gateway（[Next.js](https://nextjs.org/) + [OpenClaw](https://github.com/openclaw/openclaw)）。
 
@@ -20,12 +22,8 @@
   &nbsp;·&nbsp;
   <a href="#tech-stack">技术栈</a>
   &nbsp;·&nbsp;
-  <a href="#ecosystem">相关生态</a>
-  &nbsp;·&nbsp;
   <a href="#community">交流</a>
 </p>
-
-<img src="docs/bot_dashboard.png" alt="ONE CLAW 仪表盘：网关、趋势、专家任务" width="780" />
 
 </div>
 
@@ -43,16 +41,6 @@
 | 🌍 **六语五主题** | 简繁英 + 马来 / 印尼 / 泰；五套全局皮肤持久化 |
 | 📦 **双轨安装** | **A** 独立龙虾面板（Win `.exe` / 源码 / Docker）· **B** [`openclaw-oneclick`](packaging/openclaw-oneclick/) 一键脚本与 Inno 骨架 |
 | 🔧 **CLI 友好** | 不替代官方终端；需要时照常使用 `openclaw` |
-
-<a id="ecosystem"></a>
-
-### 相关生态 · 同类优秀项目
-
-| 项目 | 说明 |
-|------|------|
-| **[OpenClaw](https://github.com/openclaw/openclaw)** | 官方智能体网关与 CLI |
-| **[OneClaw](https://github.com/oneclaw/oneclaw)** | 「一分钟装好」的 **桌面客户端**：内置 Gateway 与 Node，适合零命令行用户（与本仓库 **Web 控制台** 路线互补） |
-| **[OpenClaw-Admin](https://github.com/itq5/OpenClaw-Admin)** | 基于 **Vue 3** 的网关管理台，另一种可视化实现 |
 
 ---
 
@@ -133,76 +121,41 @@
 
 ## 预览
 
-以下截图均来自本仓库 **[`docs/`](docs/)** 目录。**更新界面后请同步替换 `docs/` 内图片**。英文版说明与对照见 **[README.en.md](README.en.md)**。说明文字已按当前截图内容微调；**`dashboard.png` 等文件名是历史遗留，画面实为「专家战队」栅格而非纯数字首页**。
+> **说明：** README 中**不再嵌入**旧版界面整页截图（侧栏曾含龙虾/吉祥物头像，与新 Logo 不一致）。**换新品牌素材后**，请重新导出界面 PNG 覆盖 [`docs/`](docs/) 下同名文件，再在 README 中按需写回 `![](docs/文件名.png)`。英文版对照说明见 **[README.en.md](README.en.md)**。
+
+下列为与 `docs/` 文件名对应的**画面内容备忘**（便于补图时对齐）：
 
 ### 仪表盘总览与专家战队
-**`bot_dashboard.png`** — **仪表盘**：版本与**网关**卡片、配置路径与端口、**全局 Token/耗时趋势**、渠道与会话类型分布、**最近同步**、**Agent 任务状态**；顶栏 **CLAW 诊断**、**重启 OneOneClaw**、**查看 CLAW 状态**。
-
-**`dashboard.png` / `dashboard-preview.jpg`** — **专家战队**卡片墙：在线/空闲/离线、绑定**模型**、**飞书**等平台、会话/消息/Token、小趋势图；宽图常带 **会话预览** 浮层（群聊/私聊与 Token 提示）。
-
-![OneOne 仪表盘 — 网关、趋势、分布、任务追踪](docs/bot_dashboard.png)
-![专家战队 — 多 Agent 卡片、模型与平台指标](docs/dashboard.png)
-![专家战队 — 宽屏布局与会话预览](docs/dashboard-preview.jpg)
+- **`bot_dashboard.png`** — **仪表盘**：版本与**网关**卡片、配置路径与端口、**全局 Token/耗时趋势**、渠道与会话类型分布、**最近同步**、**Agent 任务状态**；顶栏 **CLAW 诊断**、**重启 OneOneClaw**、**查看 CLAW 状态**。
+- **`dashboard.png` / `dashboard-preview.jpg`** — **专家战队**卡片墙：在线/空闲/离线、绑定**模型**、**飞书**等平台、会话/消息/Token、小趋势图；宽图可含 **会话预览** 浮层。
 
 ### 模型、会话与记忆管理
-**模型页** — **接入模型列表**：主模型/兜底、**各模型被哪些专家占用**、探测预设、临时 Key、**探测通过后写配置**、Provider 表格（如 LiteLLM）。**会话列表** — 按 Agent 查看 **主会话 / 飞书群私聊 / 定时任务**、上下文 **占用比例**、单条**测试**。**记忆管理** — **Markdown 归档** 与 **SQLite 实时** 双轨路径、在线编辑 **`MEMORY.md`** 并保存。
+- **`models-preview.png`** — **接入模型列表**、Agent 绑定、探测与写配置。
+- **`会话列表.png`** — 按 Agent 的 **主会话 / 飞书 / 定时任务**、上下文占用、测试。
+- **`记忆管理.png`** — **Markdown 归档** 与 **SQLite 实时** 双轨、`MEMORY.md` 编辑。
 
-![模型 — Provider、Agent 绑定、新增与探测](docs/models-preview.png)
-![会话 — Agent 维度、飞书/cron、上下文百分比](docs/会话列表.png)
-![记忆 — 双路径说明与 MEMORY 编辑器](docs/记忆管理.png)
+### 专家工作室与三套游戏场景
+- **`pixel-office.png`** — **专家工作室**像素地图与场景切换。
+- **`游戏场景-办公室.png` / `游戏场景-星际剑桥.png` / `游戏场景-蘑菇林地.png`** — 三套场景美术。
 
-### 专家工作室（像素地图）与三套游戏场景
-**`pixel-office.png`** — **专家工作室**画布：俯视**像素场景**、**游戏场景**下拉（如**星际舰桥**）、专家**名牌**（工作中/摸鱼/下班等）、值班 SRE 等装饰。下列三图为 **经典办公室 / 星际舰桥 / 蘑菇林地** 三套美术与拓扑。
+### 专家战队与专家文件
+- **`专家战队.png` / `专家战队2.png`** — 卡片墙、群聊/Fallback/定时任务监控等。
+- **`专家文件管理.png` / `专家文件管理1.png`** — 文件合规清单与补全。
 
-![专家工作室 — 像素地图、场景切换、状态条](docs/pixel-office.png)
-![游戏场景 · 经典办公室（原版素材）](docs/游戏场景-办公室.png)
-![游戏场景 · 星际舰桥与星空背景](docs/游戏场景-星际剑桥.png)
-![游戏场景 · 蘑菇林地溪流可走格](docs/游戏场景-蘑菇林地.png)
+### 专家战队聊天
+- **`快速聊天对话.png` / `快速聊天对话2.png`** — 浏览器内会话与长文回复示例。
 
-### 专家战队与专家文件合规
-**专家战队** — 多专家卡片、**手动刷新**档位、**我要聊天**、默认模型说明。**备选图** 含 **群聊卡片**、**Fallback 模型**、**Agent 任务监控**（定时任务成功/失败）。**专家文件管理** — 各 Agent 必备 Markdown 清单、**合规率**、缺失 **ROLE.md** 等标红、**一键补全并部署**。
+### Claw 诊断与运行状态
+- **`claw诊断.png` / `查看claw运行状态.png`** — 仪表盘弹窗内 doctor / gateway 日志。
 
-![专家战队 — 卡片墙与刷新策略](docs/专家战队.png)
-![专家战队 — 群聊绑定、兜底模型、定时任务](docs/专家战队2.png)
-![专家文件 — 清单合规与补全入口](docs/专家文件管理.png)
-![专家文件 — 备选合规视图](docs/专家文件管理1.png)
-
-### 专家战队聊天（浏览器内）
-选择 **专家 + 会话** → **连接会话**，可选 **极速模式**（轻量短回复）。气泡内可出现总指挥的**长文战报/项目同步**。**清空本地记录** 仅清除**浏览器本地**聊天记录，不等于 OpenClaw 侧历史。
-
-![专家战队聊天 — 会话就绪与回复流](docs/快速聊天对话.png)
-![专家战队聊天 — 长文状态同步示例](docs/快速聊天对话2.png)
-
-### Claw 诊断与运行状态（仪表盘入口）
-**CLAW 诊断** — 弹窗内为类终端的 **`openclaw doctor`** 输出：网关地址、**端口占用** 与 **PID**（如 `node.exe`）。**查看 CLAW 状态** — 类似 **`openclaw gateway status`** 日志、RPC/stderr 提示与 **官方排障链接**。
-
-![CLAW 诊断弹窗 — doctor、端口冲突](docs/claw诊断.png)
-![查看运行状态 — gateway 日志与 PID](docs/查看claw运行状态.png)
-
-### 主题与多语言（五套主题 · 六种界面语言）
-侧栏 **语言** 与 **`data-theme`** 皮肤（如橙色暖调、极简暗黑）；下列为 **繁体中文** 与 **东南亚语言** 界面样例。
-
-![主题 — 暖色外壳与切换器](docs/主题变化.png)
-![界面 · 繁体中文](docs/繁体.png)
-![界面 · 马来语](docs/马来语.png)
-![界面 · 印尼语](docs/印尼语.png)
-![界面 · 泰语](docs/泰语.png)
+### 主题与多语言
+- **`主题变化.png` / `繁体.png` / `马来语.png` / `印尼语.png` / `泰语.png`**
 
 ### 告警、模型切换、统计、通道
-**告警中心** — 总开关、**接收告警的专家**列表、规则：**模型不可用**、**长时间无响应**、**消息失败率**、**定时任务连续失败**及静默时长。其余页：**切换模型**、**消息统计**图表、**通道管理**列表。
-
-![告警中心 — 规则与接收专家](docs/告警中心.png)
-![模型切换 — 单卡绑定/切换入口](docs/模型切换.png)
-![消息统计 — Token 与耗时趋势](docs/消息统计.png)
-![通道管理 — 通道绑定总览](docs/通道管理.png)
+- **`告警中心.png` / `模型切换.png` / `消息统计.png` / `通道管理.png`**
 
 ### 极简安装向导
-**首屏** — 检测到 **CLI 版本**、五步路径说明（**提供商 → 密钥 → 确认 → Gateway**）、**密钥仅在本机** 提示。**极简安装2–4** 为后续步骤（选厂商、填 Key、确认摘要、完成与检查）。
-
-![极简安装 — CLI 预检与开始配置](docs/极简的安装.png)
-![极简安装 — 提供商与密钥步骤](docs/极简安装2.png)
-![极简安装 — 确认摘要](docs/极简安装3.png)
-![极简安装 — 完成与网关检查](docs/极简安装4.png)
+- **`极简的安装.png`～`极简安装4.png`** — 部署向导各步。
 
 ### `docs/` 目录下的说明文档（非截图）
 - [DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md](docs/DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md) — Windows 打包与安装器交接说明  
