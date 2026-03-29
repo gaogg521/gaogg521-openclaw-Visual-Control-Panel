@@ -245,57 +245,80 @@ Each block below pairs **short copy with a screenshot** so you can map UI to the
 - [openclaw-models-config.md](docs/openclaw-models-config.md) — `models.providers` alignment with the dashboard  
 - [RECENT_OPTIMIZATIONS_2026-03-27.zh-CN.md](docs/RECENT_OPTIMIZATIONS_2026-03-27.zh-CN.md) — stability & polling / OpenClaw CLI notes
 
-## Installation handbook (read this first)
+<a id="install-guide"></a>
 
-There are **two different things** people call “install”. Pick the row that matches you:
+## Installation
 
-| Track | What gets installed | Typical user |
-|-------|---------------------|--------------|
-| **A — Lobster panel only** | The **web console** on **http://localhost:3003** (Next.js). **Does not** include the OpenClaw CLI or Gateway binaries inside the same package (except you already installed them yourself). | You want **only the dashboard**; OpenClaw is already on the machine, or you will install it **separately** (official installer / package manager). |
-| **B — One-click bundle (OpenClaw + lobster)** | A **scripted or custom-installer** flow: install/detect **OpenClaw CLI**, run **onboard**, start **Gateway**, then start the **lobster standalone** server and open URLs. | **New machine** or you want **one documented pipeline** for CLI + panel + wizard. |
+Both are called “install”, but they **install different stacks**. Suggested reading order: **① comparison table → ② “Which track?” → ③ only the subsection you need**.
+
+### Track comparison (A vs B)
+
+| | **Track A — Lobster panel only** | **Track B — OpenClaw + panel pipeline** |
+|--|--|--|
+| **What you get** | This repo’s **web console** (default **http://localhost:3003**) | **Scripts / installer flow**: detect or install CLI → **onboard** → start Gateway → start standalone panel |
+| **Includes OpenClaw?** | **No** (you need OpenClaw on the machine, or follow **`/setup`** after the UI is up) | **Yes, when you run the docs**: the flow installs or reuses **openclaw** |
+| **Typical use** | OpenClaw already there; or you install the CLI **yourself** | **Greenfield** or integrators who want **one ordered delivery** for **CLI + panel** |
+
+**Common confusion:** Track **A** on Windows (**NSIS `.exe`**) is **panel only**. Track **B** **wires CLI + panel** — not the same as “only double-click the lobster `.exe`”.
+
+### Which track?
+
+1. You **already** have `openclaw` and config and you manage the Gateway → **Track A**.  
+2. **Windows**, **no global Node**, you want this repo’s **NSIS installer** → **Track A**.  
+3. **Greenfield** and you will follow **`packaging/openclaw-oneclick/`** end-to-end → **Track B**.
 
 ---
 
-### A — Lobster panel only (independent install)
+### Track A — Install the lobster panel only
 
-**What “supported” means:** the **Next.js app runs** on your OS. Full features (agents, gateway health, `/setup` writing config) still need a valid **`OPENCLAW_HOME`** and usually a running **OpenClaw Gateway** — install OpenClaw **separately** if you do not already have it.
+**“Supported on Windows / macOS / Linux”** means the **Next.js app runs** there. Agents, gateway health, `/setup` writing config still need a valid **`OPENCLAW_HOME`** (with **`openclaw.json`**) and usually a running **Gateway**; install OpenClaw **separately** if needed, or use **`/setup`** plus official docs.
 
-| OS | Supported? | How users install **this repo’s panel** (what we maintain) |
-|----|--------------|--------------------------------------------------------------|
-| **Windows** | **Yes** | **End users (no separate Node):** install **`ONE Claw … Setup ….exe`** (NSIS) built by [`packaging/electron/build-electron.ps1`](packaging/electron/build-electron.ps1) → output [`packaging/electron/dist/`](packaging/electron/). Electron embeds Node and runs **standalone Next** on **3003**; see [`packaging/electron/README.md`](packaging/electron/README.md). **Developers:** install **Node 18+**, clone repo, `npm install`, `npm run dev`. **Portable:** `npm run packaging:prepare-standalone`, then `node server.js` under `.next/standalone` (set **PORT=3003** if you need the same port as dev). |
-| **macOS** | **Yes** | **No** prebuilt **`.dmg` / `.app`** in this repository ([`electron-builder.config.js`](packaging/electron/electron-builder.config.js) is **Windows NSIS only**). Use **Node 18+** + clone + `npm install` / `npm run dev`, or **Docker** (see **Docker Deployment**). To ship a Mac desktop bundle, add an electron-builder **`mac`** target and build **on macOS**. |
-| **Linux** (Ubuntu, Debian, etc.) | **Yes** | Same as macOS: **Node 18+** + source (**nvm** / NodeSource recommended on Ubuntu) or **Docker**. No Linux **AppImage/.deb** is produced here unless you add a **`linux`** target. |
+#### Windows
 
-**After the panel is running:** open **http://localhost:3003**. If OpenClaw is missing, either install the **official CLI** first or use **`/setup`** inside the panel (it will guide you once the UI is up). Configure **`OPENCLAW_HOME`** in `.env.local` if your tree is not `~/.openclaw` (see **Configuration**).
+| Role | What to do |
+|------|------------|
+| **End users (no separate Node)** | Install NSIS **`ONE Claw … Setup ….exe`** ([`packaging/electron/build-electron.ps1`](packaging/electron/build-electron.ps1) → [`packaging/electron/dist/`](packaging/electron/dist/)). Electron embeds Node, standalone, port **3003**. See [`packaging/electron/README.md`](packaging/electron/README.md). |
+| **Developers** | **Node 18+** → `npm install` → `npm run dev`. |
+| **Local prod / portable** | After **`npm run build`**, run **`npm run start`** (or **`npm run packaging:prepare-standalone`** first; same idea as **`node server.js`** under **`.next/standalone`** with **PORT=3003**). |
+
+#### macOS
+
+No prebuilt **`.dmg` / `.app`** here ([`electron-builder.config.js`](packaging/electron/electron-builder.config.js) is **Windows NSIS only**). Use **Node 18+** + clone + `npm install` / `npm run dev`, or **Docker** (**Docker Deployment** below). For a Mac desktop bundle, add a **`mac`** target in electron-builder and build **on macOS**.
+
+#### Linux (incl. Ubuntu)
+
+Same as macOS: **Node 18+** + source (**nvm** / NodeSource on Ubuntu) or **Docker**. No **AppImage/.deb** by default unless you add a **`linux`** target.
+
+**When the panel is up:** open **http://localhost:3003**. Set **`OPENCLAW_HOME`** in **`.env.local`** if not using the default tree (see **Configuration**).
 
 ---
 
-### B — One-click bundle (OpenClaw CLI + lobster panel)
+### Track B — One-click pipeline (OpenClaw + lobster panel)
 
-This track is **not** the same as “double-click the lobster `.exe` only”. It lives under **[`packaging/openclaw-oneclick/`](packaging/openclaw-oneclick/)** and wires:
+**Folder:** **[`packaging/openclaw-oneclick/`](packaging/openclaw-oneclick/)**.
 
-1. **Conflict checks** — skip reinstall if `openclaw` is already on PATH; optional strict checks for **gateway port (default 18789)** and **lobster port 3003**.  
-2. **Install OpenClaw** — wrappers around the **official** `install.sh` / `install.ps1` (see table in [`packaging/openclaw-oneclick/README.md`](packaging/openclaw-oneclick/README.md)).  
-3. **Onboarding** — `wizard.env` + **`run-onboard-from-env`**, or the browser wizard **`http://localhost:3003/setup`** after the panel is up.  
-4. **Start lobster** — **`start-lobster-standalone`**.ps1 / .sh (needs a built **standalone** tree from **`npm run packaging:prepare-standalone`**).  
-5. **Open dashboards** — **`wait-gateway-open-dashboards`**.ps1 / .sh when you want to auto-open OpenClaw Web + lobster URLs.
+**Flow outline:**
 
-| OS | What to read / run |
-|----|--------------------|
-| **Windows** | User journey: **[`WINDOWS_USER_JOURNEY.zh-CN.md`](packaging/openclaw-oneclick/WINDOWS_USER_JOURNEY.zh-CN.md)** (EXE wizard vs “start 3003 first”). Maintainer: **`install-openclaw-windows.ps1`**, Inno **`OpenClawOneClick.iss` / Full** — see **[`packaging/openclaw-oneclick/README.md`](packaging/openclaw-oneclick/README.md)** and **[`docs/DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md`](docs/DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md)**. |
-| **macOS / Linux** | Same README: **`install-openclaw-macos-linux.sh`**, **`start-lobster-standalone.sh`**, **`wait-gateway-open-dashboards.sh`**. |
+1. **Conflict checks** — skip reinstall if `openclaw` is on PATH; optional checks for gateway (**18789**) and lobster (**3003**) (see that README).  
+2. **Install OpenClaw** — wrappers around official **`install.sh` / `install.ps1`**.  
+3. **Onboarding** — **`http://localhost:3003/setup`**, or **`wizard.env` + `run-onboard-from-env`** → **`openclaw onboard --non-interactive`**.  
+4. **Start lobster** — run **`npm run packaging:prepare-standalone`** in this repo, then **`start-lobster-standalone`**.ps1 / .sh.  
+5. **Open dashboards** — **`wait-gateway-open-dashboards`**.ps1 / .sh, etc.
 
-**Honest scope:** a polished **single** “double-click installer” that bundles **portable Node + CLI + lobster** for every OS is **your packaging/CI** work; this repo ships **scripts + ISS skeletons** and documents the intended order of operations (see openclaw-oneclick README, section on DMG/EXE).
+**Read first by OS:**
+
+| OS | Docs |
+|----|------|
+| **Windows** | **[`WINDOWS_USER_JOURNEY.zh-CN.md`](packaging/openclaw-oneclick/WINDOWS_USER_JOURNEY.zh-CN.md)**; maintainers: **[`packaging/openclaw-oneclick/README.md`](packaging/openclaw-oneclick/README.md)**, **[`docs/DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md`](docs/DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md)**. |
+| **macOS / Linux** | Same README: **`install-openclaw-macos-linux.sh`**, **`start-lobster-standalone.sh`**, **`wait-gateway-open-dashboards.sh`**, etc. |
+
+**Scope:** a single polished “double-click” installer with **portable Node + CLI + lobster** is **your CI/signing** work (Inno, pkg, create-dmg, …). This repo ships **scripts + ISS skeletons**; see openclaw-oneclick README (**DMG/EXE**).
 
 ---
 
 ## Getting Started
 
-### Which row from the handbook?
-
-- **Windows · panel only · no Node:** Track **A** → lobster **`.exe`**.  
-- **macOS / Linux · panel only:** Track **A** → **Node + npm** or **Docker**.  
-- **Fresh stack · CLI + panel:** Track **B** → **`packaging/openclaw-oneclick/`** (+ **`WINDOWS_USER_JOURNEY`** on Windows).
+**If you have not picked a track yet, read [Installation](#install-guide) first.** Short map: **Windows · panel only · no Node** → Track **A** **`.exe`**; **macOS / Linux · panel only** → Track **A** **Node** or **Docker**; **fresh CLI + panel** → Track **B** **`packaging/openclaw-oneclick/`** (on Windows, read **`WINDOWS_USER_JOURNEY`**).
 
 See [Quick Start Guide](quick_start.md) for prompt / git / skill install options.
 
@@ -309,16 +332,17 @@ npm install
 npm run dev
 ```
 
-- **Dev / local production** (`npm run dev` / `npm run start`) uses **port `3003`** (see `package.json`).
-- **`npm run dev`** runs **`node scripts/check-dev-port.mjs`** first: if **3003** is already in use, the command exits — stop the old Next.js process before starting another.
-- Open **http://localhost:3003** in your browser.
+- **Port `3003` by default** (see `package.json`).
+- **`npm run dev`** — `next dev` with HMR; runs **`scripts/check-dev-port.mjs`** first and exits if **3003** is in use.
+- **`npm run start`** — this repo uses **`output: "standalone"`** in **`next.config`**. Do **not** use raw **`next start -p 3003`** (not compatible with standalone). Instead:
+  1. Run **`npm run build`** when sources or deps change (build already copies **`static`** / **`public`** into **`.next/standalone`**).
+  2. Then **`npm run start`**, which runs **`scripts/start-prod.mjs`** → **`.next/standalone/server.js`** with default **`PORT=3003`**, **`HOSTNAME=0.0.0.0`**.
+  - You **do not** need **`build`** before every **`start`** if you only stopped the process and changed nothing.
+- **`npm run stop`** — kills whatever is **LISTENING on 3003** (`scripts/kill-port.mjs`).
+- **`npm run restart`** — always frees **3003**, then starts production with **`PORT=3003`** (`scripts/restart-prod.mjs`); it does **not** run **`build`**.
+- Open **`http://localhost:3003`** or **`http://127.0.0.1:3003`**. If you use a **LAN IP** (e.g. **`http://192.168.x.x:3003`**), set **`CONFIG_ALLOW_LAN=1`** in **`.env.local`** so `/api/config` and related guards accept private RFC1918 hosts (see **`.env.example`**). Avoid **`SETUP_ALLOW_REMOTE=1`** on public networks.
 
-Other scripts:
-
-- `npm run build` — production build  
-- `npm run start` — serve production build on port **3003**  
-- `npm run generate-pixel-assets` — regenerate pixel-office asset sprites  
-- `npm run i18n:merge-sea` — merge SEA locale chunks (maintainers)
+Other scripts: `npm run generate-pixel-assets`, `npm run i18n:merge-sea` (maintainers). More detail: **[quick_start.md](quick_start.md)**.
 
 **Track B / maintainers:** full one-click narrative, conflict env vars, and ISS notes are in **[`packaging/openclaw-oneclick/README.md`](packaging/openclaw-oneclick/README.md)**. Comparable desktop UX: community **[OneClaw](https://github.com/oneclaw/oneclaw)**.
 

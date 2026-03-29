@@ -4,18 +4,13 @@ import path from "path";
 import { getConfigCache, setConfigCache } from "@/lib/config-cache";
 import { OPENCLAW_CONFIG_PATH, OPENCLAW_HOME } from "@/lib/openclaw-paths";
 import { detectAndFixOpenclawHome, getResolvedConfigPath } from "@/lib/openclaw-home-detect";
+import { isTrustedConfigHost } from "@/lib/api-local-guard";
 
 // 配置文件路径：优先使用 OPENCLAW_HOME 环境变量，否则默认 ~/.openclaw
 const CONFIG_PATH = OPENCLAW_CONFIG_PATH;
 const OPENCLAW_DIR = OPENCLAW_HOME;
 
 const CACHE_TTL_MS = 30_000;
-
-function isLocalHost(host: string | null): boolean {
-  if (!host) return false;
-  const h = host.split(":")[0]?.toLowerCase() ?? "";
-  return h === "localhost" || h === "127.0.0.1" || h === "::1" || h === "[::1]";
-}
 
 // 从配置的 allowFrom 读取用户 id，用于构建 session key
 
@@ -262,10 +257,13 @@ function readIdentityName(agentId: string, agentDir?: string, workspace?: string
 
 export async function GET(req: Request) {
   const host = req.headers.get("host");
-  const allowRemote = process.env.SETUP_ALLOW_REMOTE === "1";
-  if (!allowRemote && !isLocalHost(host)) {
+  if (!isTrustedConfigHost(host)) {
     return NextResponse.json(
-      { error: "Config API is localhost-only.", blocked: true },
+      {
+        error:
+          "Config API is localhost-only. Open via http://localhost:3003 or http://127.0.0.1:3003, or set CONFIG_ALLOW_LAN=1 for LAN IPs, or SETUP_ALLOW_REMOTE=1 (not recommended on public networks).",
+        blocked: true,
+      },
       { status: 403 },
     );
   }

@@ -23,8 +23,18 @@ OPENCLAW_HOME=C:/Users/你的用户名/.openclaw
 
 ## 2. 访问地址与界面说明
 
-- 开发/本地生产默认端口：**`3003`**（见 `package.json`）。
-- 浏览器打开：**http://localhost:3003**
+- 默认端口：**`3003`**（见 `package.json`）。
+- 浏览器请优先使用 **http://localhost:3003** 或 **http://127.0.0.1:3003**。若用局域网地址 **http://192.168.x.x:3003** 打开，需在 `.env.local` 设置 **`CONFIG_ALLOW_LAN=1`**（见 `.env.example`），否则 Config 等 API 会返回 **`localhost-only`**。
+- **生产模式**：`next.config` 为 **`output: "standalone"`**，应 **`npm run build` 后执行 `npm run start`**（会启动 `.next/standalone/server.js` 并同步 static/public）。不要单独使用 `next start -p 3003`（与 standalone 不匹配）。
+- 生产启动可设环境变量 **`PORT`**（默认 3003）、**`HOSTNAME`**（默认 `0.0.0.0`）。
+- 端口被占用：可执行 **`npm run stop`**（固定结束占用 **3003** 的监听进程）；或用 `netstat -ano | findstr :3003` 手动查 PID。其它端口：`node scripts/kill-port.mjs 4000`。
+- **生产重启**：`npm run restart` — **固定释放 3003** 后再以 **`PORT=3003`** 拉起 standalone（需已 `npm run build`；不受本机其它 `PORT` 环境变量影响）。
+
+```bash
+npm run build
+npm run start
+```
+
 - **语言**：侧栏可选 **简中 / 繁中 / English / 马来语 / 印尼语 / 泰语**（不仅是中英文）。
 - **主题**：侧栏与首页共用 **五套皮肤**（深浅 + 科技蓝 + 暖橙 + 森绿），不仅是「深色/浅色」两种。
 - **极简部署**：装好 `openclaw` 后，在浏览器打开 **`http://localhost:3003/setup`**，按三步向导填写厂商与 API Key（无需手改 env 文件）。

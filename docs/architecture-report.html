@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ONE CLAW 龙虾可视化控制面板 · 架构分析报告</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #1a1a2e;
+    background: #ffffff;
+    padding: 0;
+  }
+
+  /* ── 封面页 ── */
+  .cover {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    color: white;
+    text-align: center;
+    padding: 60px 40px;
+    page-break-after: always;
+  }
+  .cover .logo {
+    font-size: 72px;
+    margin-bottom: 20px;
+  }
+  .cover h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    color: #e0e0ff;
+  }
+  .cover h2 {
+    font-size: 16px;
+    font-weight: 400;
+    color: #a0a0cc;
+    margin-bottom: 40px;
+  }
+  .cover .meta {
+    display: flex;
+    gap: 40px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .cover .meta-item {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    padding: 14px 24px;
+  }
+  .cover .meta-item .label { font-size: 11px; color: #8080aa; margin-bottom: 4px; }
+  .cover .meta-item .value { font-size: 14px; font-weight: 600; color: #c0c0ee; }
+  .cover .divider {
+    width: 80px;
+    height: 2px;
+    background: linear-gradient(90deg, #6366f1, #8b5cf6);
+    margin: 32px auto;
+    border-radius: 2px;
+  }
+
+  /* ── 目录页 ── */
+  .toc-page {
+    padding: 50px 60px;
+    page-break-after: always;
+  }
+  .toc-page h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #302b63;
+    margin-bottom: 30px;
+    padding-bottom: 10px;
+    border-bottom: 3px solid #6366f1;
+  }
+  .toc-item {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    padding: 6px 0;
+    border-bottom: 1px dotted #ddd;
+  }
+  .toc-item .num { font-weight: 700; color: #6366f1; min-width: 28px; font-size: 13px; }
+  .toc-item .title { flex: 1; color: #333; font-size: 13px; }
+  .toc-item .dots { flex: 1; border-bottom: 1px dotted #ccc; margin: 0 8px; }
+  .toc-item .page { color: #888; font-size: 12px; min-width: 24px; text-align: right; }
+
+  /* ── 正文页 ── */
+  .content-page {
+    padding: 50px 60px;
+    page-break-inside: avoid;
+  }
+  .section {
+    margin-bottom: 36px;
+    page-break-inside: avoid;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e8e8f0;
+  }
+  .section-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  h2.section-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a1a2e;
+  }
+  h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #302b63;
+    margin: 20px 0 10px;
+    padding-left: 10px;
+    border-left: 3px solid #8b5cf6;
+  }
+  p { margin-bottom: 10px; color: #333; }
+
+  /* ── 表格 ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-size: 12px;
+    page-break-inside: avoid;
+  }
+  thead tr {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+  }
+  thead th {
+    padding: 9px 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 12px;
+  }
+  tbody tr:nth-child(even) { background: #f5f5ff; }
+  tbody tr:hover { background: #ebebff; }
+  td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #e8e8f0;
+    vertical-align: top;
+    color: #333;
+  }
+  td:first-child { font-weight: 600; color: #302b63; }
+
+  /* ── 代码块 ── */
+  pre {
+    background: #1a1a2e;
+    color: #a0e0b0;
+    border-radius: 8px;
+    padding: 18px 20px;
+    font-family: "JetBrains Mono", "Consolas", "Courier New", monospace;
+    font-size: 11.5px;
+    line-height: 1.6;
+    overflow: hidden;
+    margin: 12px 0;
+    page-break-inside: avoid;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  code {
+    background: #f0f0ff;
+    color: #5c3dcc;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: "Consolas", monospace;
+    font-size: 11.5px;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+
+  /* ── 信息卡片 ── */
+  .info-card {
+    background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+    border: 1px solid #c4b5fd;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 14px 0;
+  }
+  .info-card h4 {
+    font-size: 13px;
+    font-weight: 700;
+    color: #5b21b6;
+    margin-bottom: 10px;
+  }
+  .info-card ul { padding-left: 18px; }
+  .info-card ul li { color: #4c1d95; margin-bottom: 4px; font-size: 12px; }
+
+  /* ── 架构图 ── */
+  .arch-box {
+    background: #0f0c29;
+    color: #c0ffc0;
+    border-radius: 10px;
+    padding: 20px 24px;
+    font-family: "Consolas", monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    margin: 14px 0;
+    page-break-inside: avoid;
+    white-space: pre;
+  }
+
+  /* ── 标签组 ── */
+  .badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0;
+  }
+  .badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11.5px;
+    font-weight: 600;
+  }
+  .badge-blue { background: #dbeafe; color: #1e40af; }
+  .badge-purple { background: #ede9fe; color: #5b21b6; }
+  .badge-green { background: #dcfce7; color: #166534; }
+  .badge-orange { background: #fff7ed; color: #9a3412; }
+  .badge-red { background: #fee2e2; color: #991b1b; }
+
+  /* ── 复杂度指示器 ── */
+  .complexity-high { color: #dc2626; font-weight: 700; }
+  .complexity-mid { color: #d97706; font-weight: 700; }
+  .complexity-low { color: #16a34a; font-weight: 700; }
+
+  /* ── 页脚 ── */
+  .footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    background: #f8f7ff;
+    border-top: 1px solid #e0ddf8;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 60px;
+    font-size: 11px;
+    color: #888;
+  }
+
+  /* ── 打印 ── */
+  @media print {
+    @page { size: A4; margin: 15mm 18mm; }
+    .cover { min-height: auto; padding: 80px 40px; }
+    pre, .arch-box { font-size: 10px; }
+    table { font-size: 11px; }
+  }
+
+  /* ── 分隔 ── */
+  .page-break { page-break-before: always; }
+  hr { border: none; border-top: 1px solid #e0ddf8; margin: 28px 0; }
+
+  /* ── 摘要块 ── */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin: 16px 0;
+  }
+  .summary-card {
+    background: #f8f7ff;
+    border: 1px solid #e0ddf8;
+    border-radius: 8px;
+    padding: 14px;
+    text-align: center;
+  }
+  .summary-card .sc-icon { font-size: 24px; margin-bottom: 6px; }
+  .summary-card .sc-label { font-size: 11px; color: #888; margin-bottom: 4px; }
+  .summary-card .sc-value { font-size: 14px; font-weight: 700; color: #302b63; }
+
+  /* ── 模块列表 ── */
+  .module-list { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }
+  .module-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 12px;
+    background: #fafafa;
+    border: 1px solid #e8e8f0;
+    border-radius: 6px;
+  }
+  .module-item .icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .module-item .name { font-weight: 700; color: #302b63; font-size: 12.5px; min-width: 140px; }
+  .module-item .desc { color: #555; font-size: 12px; flex: 1; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ 封面页 ═══════════════════ -->
+<div class="cover">
+  <div class="logo">🦞</div>
+  <h1>ONE CLAW 龙虾可视化控制面板</h1>
+  <h2>技术架构分析报告</h2>
+  <div class="divider"></div>
+  <div class="meta">
+    <div class="meta-item">
+      <div class="label">项目名称</div>
+      <div class="value">openclaw-bot-review</div>
+    </div>
+    <div class="meta-item">
+      <div class="label">框架版本</div>
+      <div class="value">Next.js 16 / React 19</div>
+    </div>
+    <div class="meta-item">
+      <div class="label">报告日期</div>
+      <div class="value">2026-03-29</div>
+    </div>
+    <div class="meta-item">
+      <div class="label">分析模块数</div>
+      <div class="value">100+ 文件</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ 目录页 ═══════════════════ -->
+<div class="toc-page">
+  <h2>目 录</h2>
+  <div class="toc-item"><span class="num">一</span><span class="title">整体技术栈</span><span class="dots"></span></div>
+  <div class="toc-item"><span class="num">二</span><span class="title">总体架构图</span><span class="dots"></span></div>
+  <div class="toc-item"><span class="num">三</span><span class="title">目录结构与职责</span><span class="dots"></span></div>
+  <div class="toc-item"><span class="num">四</span><span class="title">前端页面路由与功能模块</span><span class="dots"></span></div>
+  <div class="toc-item"><span class="num">五</span><span class="title">后端 API 路由分层设计</span><span class="dots"></span></div>
+  <div class="toc-item"><span class="num">六</span><span class="title">Lib 层工具库职责</span><span class="dots"></span></div>
+  <div class="toc-item"><span class="num">七</span><span class="title">数据流与状态管理</span><span class="dots"></span></div>
+  <div class="toc-item"><span class="num">八</span><span class="title">与外部系统的集成点</span><span class="dots"></span></div>
+  <div class="toc-item"><span class="num">九</span><span class="title">像素办公室独立架构</span><span class="dots"></span></div>
+  <div class="toc-item"><span class="num">十</span><span class="title">部署架构</span><span class="dots"></span></div>
+  <div class="toc-item"><span class="num">十一</span><span class="title">关键设计模式与架构决策</span><span class="dots"></span></div>
+  <div class="toc-item"><span class="num">十二</span><span class="title">模块复杂度与代码规模</span><span class="dots"></span></div>
+  <div class="toc-item"><span class="num">十三</span><span class="title">架构总结</span><span class="dots"></span></div>
+</div>
+
+<!-- ═══════════════════ 正文 ═══════════════════ -->
+<div class="content-page">
+
+  <!-- §1 技术栈 -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">一</span>
+      <h2 class="section-title">整体技术栈</h2>
+    </div>
+    <div class="summary-grid">
+      <div class="summary-card"><div class="sc-icon">⚛️</div><div class="sc-label">前端框架</div><div class="sc-value">React 19</div></div>
+      <div class="summary-card"><div class="sc-icon">▲</div><div class="sc-label">全栈框架</div><div class="sc-value">Next.js 16</div></div>
+      <div class="summary-card"><div class="sc-icon">🔷</div><div class="sc-label">类型系统</div><div class="sc-value">TypeScript 5</div></div>
+      <div class="summary-card"><div class="sc-icon">🎨</div><div class="sc-label">样式</div><div class="sc-value">Tailwind CSS 4</div></div>
+      <div class="summary-card"><div class="sc-icon">🐬</div><div class="sc-label">关系型数据库</div><div class="sc-value">MySQL 8.0</div></div>
+      <div class="summary-card"><div class="sc-icon">🗄️</div><div class="sc-label">嵌入式数据库</div><div class="sc-value">SQLite3</div></div>
+    </div>
+    <table>
+      <thead>
+        <tr><th>层次</th><th>技术</th><th>版本</th><th>用途</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>前端框架</td><td>Next.js App Router</td><td>16.0.0</td><td>SSR/CSR 全栈框架，内置 API Routes</td></tr>
+        <tr><td>UI 库</td><td>React</td><td>19.0.0</td><td>组件化 UI，Hooks 状态管理</td></tr>
+        <tr><td>类型系统</td><td>TypeScript</td><td>5.0.0</td><td>静态类型检查，提升代码可维护性</td></tr>
+        <tr><td>样式系统</td><td>Tailwind CSS + PostCSS</td><td>4.0.0</td><td>原子化 CSS，5 套主题系统</td></tr>
+        <tr><td>运行时</td><td>Node.js Alpine</td><td>22.x</td><td>服务端执行环境</td></tr>
+        <tr><td>关系型数据库</td><td>MySQL</td><td>8.0+</td><td>长期归档、聚合统计、Agent/Channel 存储</td></tr>
+        <tr><td>嵌入式数据库</td><td>SQLite3 (better-sqlite3)</td><td>12.8.0</td><td>Agent 本地会话记忆、高频写入</td></tr>
+        <tr><td>图像处理</td><td>Sharp</td><td>0.34.5</td><td>生成像素办公室资源</td></tr>
+        <tr><td>部署容器</td><td>Docker</td><td>—</td><td>多阶段构建，standalone 最小镜像</td></tr>
+        <tr><td>桌面应用</td><td>Electron</td><td>—</td><td>可选打包为 .exe/.dmg</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- §2 总体架构图 -->
+  <div class="section page-break">
+    <div class="section-header">
+      <span class="section-num">二</span>
+      <h2 class="section-title">总体架构图</h2>
+    </div>
+    <div class="arch-box">┌─────────────────────────────────────────────────────────────┐
+│                   浏览器（React 客户端）                         │
+│  ThemeProvider ─→ I18nProvider ─→ Sidebar + AlertMonitor     │
+│                                                               │
+│  ┌───────────┐ ┌───────────┐ ┌──────────┐ ┌──────────┐      │
+│  │Dashboard  │ │PixelOffice│ │  Stats   │ │  Alerts  │ ...  │
+│  └───────────┘ └───────────┘ └──────────┘ └──────────┘      │
+└──────────────── fetch / WebSocket ──────────────────────────┘
+                              │
+┌─────────────────────────────────────────────────────────────┐
+│              Next.js API Routes  (app/api/)                  │
+│  /config  /stats  /alerts  /pixel-office  /chat  /setup      │
+│  /memory  /sessions  /openclaw  /storage  /test-*            │
+│                    ↑ localhost 守卫 (api-local-guard)         │
+│                                                               │
+│              lib-layer  (业务逻辑层)                          │
+│  openclaw-cli  model-probe  db-sync  alert-incidents         │
+│  gateway-url   config-cache  openclaw-paths  i18n  theme     │
+└──────────┬─────────────┬──────────────┬─────────────────────┘
+           │             │              │
+    ┌──────┴──────┐ ┌────┴──────┐ ┌────┴───────────────────┐
+    │  文件系统    │ │  MySQL    │ │  OpenClaw Gateway      │
+    │ ~/.openclaw │ │ oc_agents │ │  ws://127.0.0.1:18789  │
+    │ *.json      │ │ oc_sessions│ │  CLI: openclaw ...     │
+    │ *.jsonl     │ │ oc_channels│ │  HTTP /v1/chat/...     │
+    │ *.sqlite    │ └───────────┘ └────────────────────────┘
+    └─────────────┘</div>
+  </div>
+
+  <!-- §3 目录结构 -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">三</span>
+      <h2 class="section-title">目录结构与职责</h2>
+    </div>
+    <h3>app/ — 前端页面与 API 路由</h3>
+    <div class="module-list">
+      <div class="module-item"><span class="icon">🗂️</span><span class="name">layout.tsx</span><span class="desc">根布局 — 挂载 Sidebar、AlertMonitor、GlobalBugsOverlay</span></div>
+      <div class="module-item"><span class="icon">🎨</span><span class="name">providers.tsx</span><span class="desc">ThemeProvider + I18nProvider，全局 Context 注入</span></div>
+      <div class="module-item"><span class="icon">🧭</span><span class="name">sidebar.tsx</span><span class="desc">可折叠侧边栏，包含 PixelSVG 图标系统、Logo 拖拽交互</span></div>
+      <div class="module-item"><span class="icon">🔔</span><span class="name">alert-monitor.tsx</span><span class="desc">全局后台静默轮询告警，非 /setup 路径均运行</span></div>
+      <div class="module-item"><span class="icon">🐛</span><span class="name">global-bugs-overlay.tsx</span><span class="desc">像素虫子全局覆盖层（游戏化装饰）</span></div>
+    </div>
+    <h3>app/api/ — 后端 API（Next.js API Routes）</h3>
+    <pre>app/api/
+├── config/            配置层：获取/修改 Agent、Provider、Model 配置
+├── openclaw/          OpenClaw 层：status、gateway-status、doctor、restart、channels
+├── stats/             统计层：单Agent统计、全局汇总、模型维度
+├── storage/           存储层：MySQL 指标查询、OpenClaw→MySQL 同步
+├── memory/            记忆层：SQLite实时查询、Markdown 归档读写
+├── pixel-office/      游戏层：房间布局、Agent贡献、BGM轨道
+├── alerts/            告警层：配置读写、触发检查
+├── chat/              聊天层：completions（流式）、WebSocket升级
+├── sessions/          会话层：单Agent会话列表
+├── agent-activity/    活动层：Agent 任务/Cron 追踪
+└── test-*/            测试层：模型/平台/会话/DM 连接测试</pre>
+    <h3>lib/ — 业务逻辑工具库</h3>
+    <pre>lib/
+├── openclaw-cli.ts           OpenClaw CLI 命令执行（spawn + stream）
+├── openclaw-paths.ts         路径常量（OPENCLAW_HOME, AGENTS_DIR 等）
+├── openclaw-home-detect.ts   自动探测 OpenClaw 主目录（多路径候选）
+├── openclaw-skills.ts        技能列表读取与解析
+├── gateway-url.ts            Gateway WebSocket URL 构建
+├── i18n.tsx                  国际化（6语言：zh/zh-TW/en/ms/id/th）
+├── theme.tsx                 主题系统（5套 CSS 变量主题）
+├── db-sync.ts                OpenClaw JSON → MySQL 5张表同步
+├── db-metrics.ts             MySQL 统计指标查询
+├── alert-incidents.ts        告警事件状态机（active/ack/snoozed/recovered）
+├── model-probe*.ts           模型连接探针（OpenAI兼容 + 自定义HTTP）
+├── agent-session-activity.ts 会话活跃性分析（多源合并）
+├── config-cache.ts           配置内存缓存（30s TTL）
+├── api-local-guard.ts        localhost 访问守卫（白名单 IP）
+└── pixel-office/             像素办公室完整引擎（40+ 文件）</pre>
+  </div>
+
+  <!-- §4 前端页面路由 -->
+  <div class="section page-break">
+    <div class="section-header">
+      <span class="section-num">四</span>
+      <h2 class="section-title">前端页面路由与功能模块</h2>
+    </div>
+    <table>
+      <thead>
+        <tr><th>路由</th><th>功能描述</th><th>主要数据源</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>/oneone-dashboard</td><td>主仪表盘：网关状态、版本、通道数、存储指标、诊断工具</td><td>/api/openclaw/status, /api/stats-all</td></tr>
+        <tr><td>/ (expert-squad)</td><td>专家战队：Agent 卡片、模型测试、平台/会话测试、任务追踪</td><td>/api/config, /api/agent-status</td></tr>
+        <tr><td>/pixel-office</td><td>🎮 游戏化可视化：像素办公室、Agent化身漫步、家具编辑器</td><td>/api/pixel-office/*</td></tr>
+        <tr><td>/models</td><td>模型管理：Provider 配置、性能指标、模型探针测试、添加自定义模型</td><td>/api/config, /api/stats-models</td></tr>
+        <tr><td>/sessions</td><td>会话浏览：频道分布、Agent 分布、搜索/过滤</td><td>/api/sessions/[agentId]</td></tr>
+        <tr><td>/channels</td><td>通道管理：飞书/钉钉/Discord/Telegram 通道可视化配置</td><td>/api/openclaw/channels</td></tr>
+        <tr><td>/memory</td><td>记忆管理：SQLite 实时数据 + Markdown 归档文件编辑</td><td>/api/memory/*</td></tr>
+        <tr><td>/expert-files</td><td>专家文件管理：浏览、搜索、编辑 Agent 文件</td><td>/api/expert-files</td></tr>
+        <tr><td>/stats</td><td>消息统计：日/周/月聚合、Token 消耗趋势、响应时间分析</td><td>/api/stats/[agentId]</td></tr>
+        <tr><td>/alerts</td><td>告警中心：规则配置、事件闭环（确认/静默/恢复）</td><td>/api/alerts/*</td></tr>
+        <tr><td>/skills</td><td>技能管理：内置/扩展/自定义技能查看与管理</td><td>/api/skills/*</td></tr>
+        <tr><td>/setup</td><td>部署向导：预检查、一键安装、模型/通道初始化配置</td><td>/api/setup/*</td></tr>
+        <tr><td>/chat</td><td>Web Chat：实时对话、WebSocket 连接、会话管理</td><td>/api/chat/*</td></tr>
+      </tbody>
+    </table>
+    <div class="info-card">
+      <h4>📌 路由说明</h4>
+      <ul>
+        <li>根路径 <code>/</code> 通过 next.config.mjs 重定向到 <code>/oneone-dashboard</code></li>
+        <li>根页面 <code>app/page.tsx</code> 实际渲染的是专家战队（Expert Squad）内容</li>
+        <li>侧边栏（sidebar.tsx）包含 4 个导航分组：总览 / OneOne管理 / 监控 / 配置</li>
+        <li>所有页面均为 Client Component，采用 useEffect + fetch 获取数据</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- §5 API 路由分层 -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">五</span>
+      <h2 class="section-title">后端 API 路由分层设计</h2>
+    </div>
+    <table>
+      <thead>
+        <tr><th>分层</th><th>路由</th><th>方法</th><th>说明</th></tr>
+      </thead>
+      <tbody>
+        <tr><td rowspan="3">配置层</td><td>/api/config</td><td>GET</td><td>整合 Agent/Provider/Model，30s 缓存</td></tr>
+        <tr><td>/api/config/add-provider-model</td><td>POST</td><td>添加模型 Provider</td></tr>
+        <tr><td>/api/config/agent-model</td><td>PATCH</td><td>修改 Agent 绑定模型</td></tr>
+        <tr><td rowspan="3">状态层</td><td>/api/openclaw/status</td><td>GET</td><td>网关版本、通道数、模型数</td></tr>
+        <tr><td>/api/gateway-health</td><td>GET</td><td>网关健康检查</td></tr>
+        <tr><td>/api/agent-status</td><td>GET</td><td>Agent 运行状态（working/idle/offline）</td></tr>
+        <tr><td rowspan="3">命令层（流式）</td><td>/api/openclaw/doctor</td><td>POST</td><td>诊断修复，Server-Sent Events 流</td></tr>
+        <tr><td>/api/openclaw/restart</td><td>POST</td><td>重启 Gateway</td></tr>
+        <tr><td>/api/setup/oneclick-install</td><td>POST</td><td>一键安装，流式进度输出</td></tr>
+        <tr><td rowspan="4">统计层</td><td>/api/stats/[agentId]</td><td>GET</td><td>单 Agent 日/周/月统计</td></tr>
+        <tr><td>/api/stats-all</td><td>GET</td><td>全局统计汇总</td></tr>
+        <tr><td>/api/stats-models</td><td>GET</td><td>模型维度统计</td></tr>
+        <tr><td>/api/activity-heatmap</td><td>GET</td><td>Agent 活跃热力图</td></tr>
+        <tr><td rowspan="2">聊天层</td><td>/api/chat/completions</td><td>POST</td><td>聊天接口（支持流式 SSE）</td></tr>
+        <tr><td>/api/chat/connect</td><td>GET</td><td>WebSocket 协议升级</td></tr>
+        <tr><td rowspan="2">存储层</td><td>/api/storage/metrics</td><td>GET</td><td>MySQL 指标查询</td></tr>
+        <tr><td>/api/storage/sync</td><td>POST</td><td>手动触发 OpenClaw → MySQL 同步</td></tr>
+        <tr><td rowspan="2">告警层</td><td>/api/alerts</td><td>GET/PUT</td><td>告警配置读写</td></tr>
+        <tr><td>/api/alerts/check</td><td>POST</td><td>触发告警检查，发送飞书通知</td></tr>
+      </tbody>
+    </table>
+    <div class="info-card">
+      <h4>🔒 安全设计</h4>
+      <ul>
+        <li>所有敏感 API 使用 <code>enforceLocalRequest()</code> 限制仅 localhost 可访问</li>
+        <li>可通过 <code>SETUP_ALLOW_REMOTE=1</code> 环境变量解除限制（生产环境慎用）</li>
+        <li>部署向导支持 <code>LOBBY_SETUP_SECRET</code> 密钥保护</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- §6 Lib 层工具库 -->
+  <div class="section page-break">
+    <div class="section-header">
+      <span class="section-num">六</span>
+      <h2 class="section-title">Lib 层工具库职责</h2>
+    </div>
+    <h3>6.1 OpenClaw 集成模块</h3>
+    <table>
+      <thead><tr><th>文件</th><th>职责</th></tr></thead>
+      <tbody>
+        <tr><td>openclaw-cli.ts</td><td>执行 <code>openclaw</code> CLI（spawn + stream，支持 .mjs 直调避 Windows cmd 问题）</td></tr>
+        <tr><td>openclaw-paths.ts</td><td>路径常量：OPENCLAW_HOME、OPENCLAW_CONFIG_PATH、OPENCLAW_AGENTS_DIR 等</td></tr>
+        <tr><td>openclaw-home-detect.ts</td><td>自动探测 OpenClaw 主目录（多路径候选 + 环境变量优先）</td></tr>
+        <tr><td>openclaw-skills.ts</td><td>读取并解析技能列表（内置/扩展/自定义分类）</td></tr>
+        <tr><td>gateway-url.ts</td><td>构建 Gateway WebSocket URL（支持 host/port 覆盖）</td></tr>
+        <tr><td>im-channel-config.ts</td><td>IM 通道配置解析（飞书/钉钉/Discord/Telegram 等）</td></tr>
+      </tbody>
+    </table>
+    <h3>6.2 数据库模块</h3>
+    <table>
+      <thead><tr><th>文件</th><th>职责</th></tr></thead>
+      <tbody>
+        <tr><td>mysql.ts</td><td>MySQL 连接池（上限 10 连接，60s 空闲释放，环境变量配置）</td></tr>
+        <tr><td>db-sync.ts</td><td>OpenClaw JSON → MySQL 双向同步，写入 5 张表（Config/Agents/Channels/Sessions/SyncRuns）</td></tr>
+        <tr><td>db-metrics.ts</td><td>查询 MySQL：Agent计数、Session分布、通道分布、同步历史记录</td></tr>
+      </tbody>
+    </table>
+    <h3>6.3 监控与告警</h3>
+    <table>
+      <thead><tr><th>文件</th><th>职责</th></tr></thead>
+      <tbody>
+        <tr><td>alert-incidents.ts</td><td>告警事件状态机：critical/warning/info 级别，active/acknowledged/snoozed/recovered 状态流转</td></tr>
+        <tr><td>agent-session-activity.ts</td><td>会话活跃性多源合并（sessions.json + 目录 mtime + Gateway RPC）</td></tr>
+        <tr><td>gateway-agent-activity-hint.ts</td><td>从 Gateway 获取 Agent 活动快照</td></tr>
+      </tbody>
+    </table>
+    <h3>6.4 通用工具</h3>
+    <table>
+      <thead><tr><th>文件</th><th>职责</th></tr></thead>
+      <tbody>
+        <tr><td>config-cache.ts</td><td>配置内存缓存，30s TTL，避免频繁磁盘 IO</td></tr>
+        <tr><td>api-local-guard.ts</td><td>localhost 访问守卫，检查 host header</td></tr>
+        <tr><td>model-probe*.ts</td><td>模型连接探针，支持 OpenAI 兼容接口和自定义 HTTP</td></tr>
+        <tr><td>json.ts</td><td>JSON 安全解析/序列化（容错处理）</td></tr>
+        <tr><td>gateway-reachability.ts</td><td>Gateway 可达性检查（带超时）</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- §7 数据流 -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">七</span>
+      <h2 class="section-title">数据流与状态管理</h2>
+    </div>
+    <h3>7.1 整体数据流向</h3>
+    <div class="arch-box">用户操作（点击/搜索/设置）
+      ↓
+React 组件（useState + useEffect）
+      ↓
+fetch 调用 → Next.js API Route
+      ↓
+lib 工具函数（业务逻辑处理）
+      ↓
+多源数据读写：
+├── 文件系统：~/.openclaw/openclaw.json、agents/*/sessions/
+├── MySQL：oc_agents、oc_sessions、oc_channels 等
+├── SQLite：agents/*/memory/*.sqlite（同步读）
+└── OpenClaw CLI：spawn 执行命令
+      ↓
+JSON 响应 → React state 更新 → UI 重渲染</div>
+    <h3>7.2 状态管理策略</h3>
+    <table>
+      <thead><tr><th>策略</th><th>适用场景</th><th>实现</th></tr></thead>
+      <tbody>
+        <tr><td>本地 useState</td><td>页面级状态（加载中/错误/搜索/分页）</td><td>React Hooks</td></tr>
+        <tr><td>全局 Context</td><td>主题、语言（跨页面共享）</td><td>ThemeProvider + I18nProvider</td></tr>
+        <tr><td>localStorage</td><td>用户偏好持久化（主题/语言/测试结果）</td><td>浏览器存储</td></tr>
+        <tr><td>服务端内存缓存</td><td>配置数据（30s TTL）</td><td>config-cache.ts</td></tr>
+        <tr><td>定时轮询</td><td>Agent状态(30s)、告警检查(可配置间隔)</td><td>setInterval</td></tr>
+        <tr><td>WebSocket 实时</td><td>Web Chat 实时对话</td><td>/api/chat/connect</td></tr>
+      </tbody>
+    </table>
+    <h3>7.3 缓存层次</h3>
+    <div class="arch-box">浏览器层  localStorage（主题、语言、测试结果，永久）
+    ↓ miss
+API 层    内存缓存（配置数据，30s TTL）
+    ↓ miss
+磁盘层    fs.readFileSync（~/.openclaw/*.json）
+    ↓ 异步写入
+数据库层  MySQL 连接池（oc_agents/oc_sessions 等）</div>
+  </div>
+
+  <!-- §8 外部集成 -->
+  <div class="section page-break">
+    <div class="section-header">
+      <span class="section-num">八</span>
+      <h2 class="section-title">与外部系统的集成点</h2>
+    </div>
+    <table>
+      <thead><tr><th>系统</th><th>集成方式</th><th>用途</th></tr></thead>
+      <tbody>
+        <tr><td>OpenClaw Gateway</td><td>HTTP + WebSocket (127.0.0.1:18789)</td><td>实时聊天、Agent活动快照、网关状态</td></tr>
+        <tr><td>OpenClaw CLI</td><td>spawn('openclaw ...')</td><td>诊断修复、网关重启、配置查询</td></tr>
+        <tr><td>飞书 / Lark</td><td>HTTP API (open.feishu.cn / open.larksuite.com)</td><td>告警通知推送（DM 发送）</td></tr>
+        <tr><td>MySQL</td><td>连接池 (mysql2)</td><td>长期归档存储、聚合统计、Agent快照</td></tr>
+        <tr><td>SQLite</td><td>better-sqlite3 同步读</td><td>Agent 本地会话记忆、实时数据查看</td></tr>
+        <tr><td>AI Providers</td><td>自定义 HTTP 探针（OpenAI 兼容）</td><td>模型可用性测试、延迟检测</td></tr>
+      </tbody>
+    </table>
+    <h3>8.1 多 IM 通道支持</h3>
+    <div class="badge-row">
+      <span class="badge badge-blue">📱 飞书 Feishu</span>
+      <span class="badge badge-orange">🤖 钉钉 DingTalk</span>
+      <span class="badge badge-purple">🎮 Discord</span>
+      <span class="badge badge-green">✈️ Telegram</span>
+      <span class="badge badge-blue">💬 WhatsApp</span>
+      <span class="badge badge-red">🐧 QQBot</span>
+    </div>
+    <h3>8.2 多 AI Provider 支持</h3>
+    <div class="badge-row">
+      <span class="badge badge-purple">Anthropic Claude</span>
+      <span class="badge badge-green">OpenAI GPT</span>
+      <span class="badge badge-blue">Google Gemini</span>
+      <span class="badge badge-orange">月之暗面 Kimi</span>
+      <span class="badge badge-red">Ollama（本地）</span>
+      <span class="badge badge-blue">自定义 HTTP 端点</span>
+    </div>
+    <h3>8.3 飞书告警通知流程</h3>
+    <div class="arch-box">AlertMonitor（后台轮询）
+      ↓
+POST /api/alerts/check
+      ↓
+checkModelAlerts + checkBotResponseAlerts + checkCronAlerts
+      ↓
+reconcileIncidents（状态机：active→acknowledged→snoozed→recovered）
+      ↓
+shouldSendNotification（防重发：1分钟内不重复）
+      ↓
+sendAlertViaFeishu：
+  1. 获取 tenant_access_token（app_id + app_secret）
+  2. 查找最近 DM 用户（open_id）
+  3. POST /open-apis/im/v1/messages（user_id → open_id fallback）</div>
+  </div>
+
+  <!-- §9 像素办公室 -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">九</span>
+      <h2 class="section-title">像素办公室独立架构</h2>
+    </div>
+    <p>像素办公室是项目中最复杂的模块（40+ 文件），采用独立于普通 Web 页面的 Canvas 渲染架构，运行 60fps 游戏循环。</p>
+    <h3>9.1 核心引擎架构</h3>
+    <div class="arch-box">Canvas 60fps 渲染循环（requestAnimationFrame）
+              ↓
+    gameLoop.ts ──→ officeState.ts（全局状态）
+              ↓
+    renderer.ts（Canvas 像素图形渲染）
+              ↓
+    ┌──────────────────────────────────────┐
+    │ characters.ts  (Agent 化身角色)       │
+    │ wanderProfiles.ts (漫步行为 AI)       │
+    │ bugSystem.ts (虚拟 Bug NPC)           │
+    │ matrixEffect.ts (Matrix 粒子特效)     │
+    └──────────────────────────────────────┘
+              ↓
+    agentBridge.ts ←── /api/pixel-office/*
+    （同步真实 Agent 活跃状态到画面）</div>
+    <h3>9.2 子系统总览</h3>
+    <table>
+      <thead><tr><th>子系统</th><th>文件</th><th>功能</th></tr></thead>
+      <tbody>
+        <tr><td>游戏引擎</td><td>engine/gameLoop.ts, renderer.ts</td><td>帧循环、Canvas 2D 像素渲染</td></tr>
+        <tr><td>角色系统</td><td>engine/characters.ts, wanderProfiles.ts</td><td>Agent 化身、漫步 AI 行为树</td></tr>
+        <tr><td>精灵系统</td><td>sprites/spriteCache.ts, pixelAssetPack.ts</td><td>精灵缓存、像素资源包加载</td></tr>
+        <tr><td>布局系统</td><td>layout/layoutFactory.ts, furnitureCatalog.ts</td><td>5 种主题房间、家具目录</td></tr>
+        <tr><td>编辑器</td><td>editor/editorState.ts, editorActions.ts</td><td>家具放置/移除/旋转交互</td></tr>
+        <tr><td>Bug 系统</td><td>bugs/bugSystem.ts, pheromoneField.ts</td><td>虚拟 Bug NPC、信息素场寻路</td></tr>
+        <tr><td>音频系统</td><td>audio/notificationSound.ts, proceduralBgm.ts</td><td>通知音效、程序化 BGM</td></tr>
+        <tr><td>Agent 桥接</td><td>agentBridge.ts</td><td>真实 Agent 活动数据 → 游戏状态同步</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- §10 部署架构 -->
+  <div class="section page-break">
+    <div class="section-header">
+      <span class="section-num">十</span>
+      <h2 class="section-title">部署架构</h2>
+    </div>
+    <h3>10.1 Docker 多阶段构建</h3>
+    <pre>FROM node:22-alpine AS builder
+    npm ci
+    npm run build
+    → .next/standalone/ (最小化输出)
+
+FROM node:22-alpine AS runner
+    COPY .next/standalone ./
+    COPY .next/static ./.next/static
+    COPY public ./public
+    EXPOSE 3000
+    CMD ["node", "server.js"]
+
+镜像大小：约 150-200MB（standalone 模式，无 node_modules）</pre>
+    <h3>10.2 部署方式对比</h3>
+    <table>
+      <thead><tr><th>部署方式</th><th>适用场景</th><th>端口</th><th>关键命令</th></tr></thead>
+      <tbody>
+        <tr><td>npm run dev</td><td>本地开发</td><td>3003</td><td>node scripts/check-dev-port.mjs && next dev</td></tr>
+        <tr><td>Docker</td><td>云端服务器 / K8s</td><td>3000</td><td>docker build + docker run</td></tr>
+        <tr><td>Next.js standalone</td><td>EXE/DMG 打包基础</td><td>3003</td><td>npm run packaging:prepare-standalone</td></tr>
+        <tr><td>Electron</td><td>桌面应用</td><td>内嵌</td><td>packaging/electron/ 目录</td></tr>
+      </tbody>
+    </table>
+    <h3>10.3 关键环境变量</h3>
+    <pre>OPENCLAW_HOME=/home/user/.openclaw       # OpenClaw 配置目录（必须）
+OPENCLAW_CLI=openclaw                    # CLI 可执行路径
+MYSQL_HOST=127.0.0.1                     # MySQL 连接（可选，有默认值）
+MYSQL_PORT=3306
+MYSQL_USER=root
+MYSQL_PASSWORD=root
+MYSQL_DATABASE=openclaw_visualization
+SETUP_ALLOW_REMOTE=0                     # 是否允许远程访问 setup API
+LOBBY_SETUP_SECRET=your-secret           # 部署向导密钥保护</pre>
+  </div>
+
+  <!-- §11 设计模式 -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">十一</span>
+      <h2 class="section-title">关键设计模式与架构决策</h2>
+    </div>
+    <h3>11.1 设计模式应用</h3>
+    <table>
+      <thead><tr><th>模式</th><th>应用场景</th><th>实现文件</th></tr></thead>
+      <tbody>
+        <tr><td>Provider Pattern</td><td>全局状态（主题/语言）注入</td><td>providers.tsx, i18n.tsx, theme.tsx</td></tr>
+        <tr><td>Factory Pattern</td><td>生成不同主题的房间布局</td><td>pixel-office/layout/layoutFactory.ts</td></tr>
+        <tr><td>Observer Pattern</td><td>告警监听、Agent 活动追踪</td><td>alert-monitor.tsx, agent-activity.ts</td></tr>
+        <tr><td>State Machine</td><td>告警事件生命周期管理</td><td>alert-incidents.ts</td></tr>
+        <tr><td>Cache-Aside</td><td>配置数据 30s 缓存</td><td>config-cache.ts</td></tr>
+        <tr><td>Streaming Pattern</td><td>CLI 命令流式进度输出</td><td>/api/openclaw/doctor, /api/setup/*</td></tr>
+        <tr><td>Fallback Pattern</td><td>数据获取失败保留旧快照</td><td>app/page.tsx（cachedHomeData）</td></tr>
+        <tr><td>Guard Pattern</td><td>localhost 访问控制</td><td>api-local-guard.ts</td></tr>
+      </tbody>
+    </table>
+    <h3>11.2 关键架构决策</h3>
+    <div class="info-card">
+      <h4>为何选择 Next.js 全栈而不是前后端分离？</h4>
+      <ul>
+        <li>API Routes 内置，无需单独后端服务，简化部署为单进程</li>
+        <li>standalone 输出模式支持轻量 Docker 镜像（~150MB）</li>
+        <li>文件路由约定简洁，页面与 API 共享类型定义</li>
+      </ul>
+    </div>
+    <div class="info-card">
+      <h4>为何 MySQL + SQLite 混合存储？</h4>
+      <ul>
+        <li>MySQL：长期归档、聚合查询、跨 Agent 汇总报表</li>
+        <li>SQLite：Agent 本地高频写入、零配置、无需网络连接</li>
+        <li>两者互补，文件系统是"真相来源"，MySQL 是"分析层"</li>
+      </ul>
+    </div>
+    <div class="info-card">
+      <h4>像素办公室为何与普通页面完全解耦？</h4>
+      <ul>
+        <li>Canvas 渲染管道与 React DOM 渲染互不干扰</li>
+        <li>60fps 游戏循环需要独立 requestAnimationFrame 管理</li>
+        <li>复杂状态（家具/角色/碰撞）不适合 React state 管理</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- §12 复杂度估算 -->
+  <div class="section page-break">
+    <div class="section-header">
+      <span class="section-num">十二</span>
+      <h2 class="section-title">模块复杂度与代码规模</h2>
+    </div>
+    <table>
+      <thead><tr><th>模块</th><th>文件数（估）</th><th>核心职责</th><th>复杂度</th></tr></thead>
+      <tbody>
+        <tr><td>pixel-office/</td><td>40+</td><td>Canvas 游戏引擎、物理、行为树</td><td><span class="complexity-high">🔴 高</span></td></tr>
+        <tr><td>app/api/</td><td>40+</td><td>数据接口、CLI 集成、聚合逻辑</td><td><span class="complexity-mid">🟡 中高</span></td></tr>
+        <tr><td>lib/（非像素）</td><td>20+</td><td>配置解析、DB 同步、告警逻辑</td><td><span class="complexity-mid">🟡 中</span></td></tr>
+        <tr><td>app/pages/</td><td>12+</td><td>UI 表单、图表、列表展示</td><td><span class="complexity-low">🟢 低-中</span></td></tr>
+        <tr><td>i18n + theme</td><td>5</td><td>多语言翻译表、CSS 变量主题</td><td><span class="complexity-low">🟢 低</span></td></tr>
+        <tr><td>scripts/</td><td>6</td><td>构建辅助脚本</td><td><span class="complexity-low">🟢 低</span></td></tr>
+      </tbody>
+    </table>
+    <h3>12.1 国际化覆盖</h3>
+    <div class="badge-row">
+      <span class="badge badge-red">🇨🇳 简体中文 zh</span>
+      <span class="badge badge-red">🇹🇼 繁体中文 zh-TW</span>
+      <span class="badge badge-blue">🇺🇸 英文 en</span>
+      <span class="badge badge-green">🇲🇾 马来文 ms</span>
+      <span class="badge badge-orange">🇮🇩 印尼文 id</span>
+      <span class="badge badge-purple">🇹🇭 泰文 th</span>
+    </div>
+    <h3>12.2 主题系统</h3>
+    <div class="badge-row">
+      <span class="badge badge-purple">🌊 深海暗夜</span>
+      <span class="badge badge-blue">⚡ 极简浅色</span>
+      <span class="badge badge-blue">💙 蓝色科技风</span>
+      <span class="badge badge-orange">🔥 橙色暖调</span>
+      <span class="badge badge-green">🌿 森林绿境</span>
+    </div>
+  </div>
+
+  <!-- §13 总结 -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">十三</span>
+      <h2 class="section-title">架构总结</h2>
+    </div>
+    <p><strong>ONE CLAW 龙虾可视化控制面板</strong>是一个以 OpenClaw 为核心、以 Next.js 为全栈框架的 AI Agent 运维管理面板。项目最大的特色是将严肃的运维功能（监控/告警/统计/配置）与游戏化可视化（像素办公室）深度融合。</p>
+    <h3>核心亮点</h3>
+    <table>
+      <thead><tr><th>方面</th><th>设计</th><th>价值</th></tr></thead>
+      <tbody>
+        <tr><td>全栈合一</td><td>Next.js API Routes 无独立后端</td><td>单进程部署，运维简单</td></tr>
+        <tr><td>双数据库</td><td>MySQL 归档 + SQLite 实时</td><td>读写特性互补，零依赖本地运行</td></tr>
+        <tr><td>流式输出</td><td>SSE 给 CLI 命令</td><td>长时操作实时进度反馈</td></tr>
+        <tr><td>游戏化</td><td>Canvas 引擎与 DOM 解耦</td><td>60fps 高性能，趣味化运维</td></tr>
+        <tr><td>多语言/主题</td><td>6语言 + 5主题</td><td>全球化支持，高适配性</td></tr>
+        <tr><td>安全隔离</td><td>localhost 守卫</td><td>防止未授权的远程访问</td></tr>
+        <tr><td>多部署方式</td><td>Docker / Electron / standalone</td><td>云端 + 桌面双模支持</td></tr>
+      </tbody>
+    </table>
+    <div class="info-card">
+      <h4>✅ 架构优势</h4>
+      <ul>
+        <li>模块化清晰：页面/API/工具库三层分离，职责明确</li>
+        <li>扩展性强：插件式模型/通道/技能支持，新增 Provider 无需改核心</li>
+        <li>容错完善：数据获取失败降级、静默重试、多源活跃度合并</li>
+        <li>国际化完整：6语言全量覆盖，含东南亚小语种</li>
+        <li>部署灵活：从开发机 npm dev 到 Docker K8s 到桌面 Electron</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<!-- 页脚 -->
+<div class="footer">
+  <span>ONE CLAW 龙虾可视化控制面板 · 架构分析报告</span>
+  <span>生成日期：2026-03-29</span>
+</div>
+
+</body>
+</html>

@@ -4,12 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "node scripts/check-dev-port.mjs && next dev -p 3003",
-    "build": "next build",
-    "start": "next start -p 3003",
+    "build": "next build && node scripts/copy-standalone-assets.mjs",
+    "start": "node scripts/start-prod.mjs",
+    "stop": "node scripts/kill-port.mjs 3003",
+    "restart": "node scripts/restart-prod.mjs",
     "smoke:gray": "powershell -ExecutionPolicy Bypass -File scripts/gray-smoke.ps1",
     "generate-pixel-assets": "node scripts/generate-pixel-office-assets.mjs",
     "i18n:merge-sea": "node scripts/merge-sea-chunks.mjs",
-    "packaging:prepare-standalone": "npm run build && node scripts/copy-standalone-assets.mjs",
+    "packaging:prepare-standalone": "npm run build",
     "brand:mark": "node scripts/process-brand-mark.mjs"
   },
   "dependencies": {
