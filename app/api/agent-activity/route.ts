@@ -5,6 +5,10 @@ import { parseJsonText } from '@/lib/json'
 import { formatAgentDisplayName } from '@/lib/pixel-office/agentDisplayName'
 import { OPENCLAW_AGENTS_DIR, OPENCLAW_CONFIG_PATH, OPENCLAW_HOME } from '@/lib/openclaw-paths'
 import { listRuntimeAgents, resolveAgentSessionsDir } from '@/lib/agent-runtime-paths'
+import {
+  getAgentLastActivityMs,
+  getAgentSessionsDirMaxMtimeMs,
+} from '@/lib/agent-session-activity'
 import { fetchGatewayAgentActivityMap } from '@/lib/gateway-agent-activity-hint'
 
 export const dynamic = 'force-dynamic'
@@ -830,18 +834,14 @@ async function computeAgentActivityPayload(): Promise<{ agents: AgentActivity[] 
           let agentSessionsDir = ''
 
           agentSessionsDir = resolveAgentSessionsDir(agent.id)
+          // 与 /api/agent-status、告警一致：sessions.json 各会话 updatedAt + 近期 jsonl 内任意 message 时间（含飞书用户侧回复），
+          // 再与会话目录内文件最新 mtime 取大。仅用目录/sessions.json 的 stat 会漏掉「有消息但 mtime 未体现」的情况。
+          // 纯同步读盘，不 spawn、不追加并行 Gateway（避免历史上百 Node 子进程问题）。
+          // 背景与注意事项见 docs/AGENT_ACTIVITY_FEISHU_ONLINE.zh-CN.md
           if (existsSync(agentSessionsDir)) {
-            try {
-              const dirStat = await fs.stat(agentSessionsDir)
-              if (dirStat.mtimeMs > localLastActive) localLastActive = dirStat.mtimeMs
-              const sessionsIndexPath = path.join(agentSessionsDir, 'sessions.json')
-              if (existsSync(sessionsIndexPath)) {
-                const idxStat = await fs.stat(sessionsIndexPath)
-                if (idxStat.mtimeMs > localLastActive) localLastActive = idxStat.mtimeMs
-              }
-            } catch {
-              // Ignore
-            }
+            const fromSessions = getAgentLastActivityMs(agent.id) ?? 0
+            const fromDirFiles = getAgentSessionsDirMaxMtimeMs(agent.id)
+            localLastActive = Math.max(fromSessions, fromDirFiles)
           }
           const gwActive = gatewayActivity.get(agent.id) || 0
           lastActive = Math.max(localLastActive, gwActive)

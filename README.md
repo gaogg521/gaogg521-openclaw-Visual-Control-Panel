@@ -272,7 +272,8 @@
 ### `docs/` 目录下的说明文档（非截图）
 - [DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md](docs/DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md) — Windows 打包与安装器交接说明  
 - [openclaw-models-config.md](docs/openclaw-models-config.md) — 模型与 `openclaw.json` 字段对齐说明  
-- [RECENT_OPTIMIZATIONS_2026-03-27.zh-CN.md](docs/RECENT_OPTIMIZATIONS_2026-03-27.zh-CN.md) — 近期稳定性与轮询 / OpenClaw 调用优化记录
+- [RECENT_OPTIMIZATIONS_2026-03-27.zh-CN.md](docs/RECENT_OPTIMIZATIONS_2026-03-27.zh-CN.md) — 近期稳定性与轮询 / OpenClaw 调用优化记录  
+- [AGENT_ACTIVITY_FEISHU_ONLINE.zh-CN.md](docs/AGENT_ACTIVITY_FEISHU_ONLINE.zh-CN.md) — 专家工作室与飞书在线状态不一致：原因、`agent-activity` 修复说明、勿并行 Gateway 子进程
 
 <a id="install-guide"></a>
 

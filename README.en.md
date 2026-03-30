@@ -243,7 +243,8 @@ Each block below pairs **short copy with a screenshot** so you can map UI to the
 ### Docs in `docs/` (text)
 - [DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md](docs/DEPLOYMENT_AND_WINDOWS_PACKAGING_HANDOFF.zh-CN.md) — Windows packaging / installer handoff (zh-CN)  
 - [openclaw-models-config.md](docs/openclaw-models-config.md) — `models.providers` alignment with the dashboard  
-- [RECENT_OPTIMIZATIONS_2026-03-27.zh-CN.md](docs/RECENT_OPTIMIZATIONS_2026-03-27.zh-CN.md) — stability & polling / OpenClaw CLI notes
+- [RECENT_OPTIMIZATIONS_2026-03-27.zh-CN.md](docs/RECENT_OPTIMIZATIONS_2026-03-27.zh-CN.md) — stability & polling / OpenClaw CLI notes  
+- [AGENT_ACTIVITY_FEISHU_ONLINE.zh-CN.md](docs/AGENT_ACTIVITY_FEISHU_ONLINE.zh-CN.md) — Pixel Office vs Feishu “online”: root cause, `/api/agent-activity` fix, no parallel gateway spawns (zh-CN)
 
 <a id="install-guide"></a>
 
