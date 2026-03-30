@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import { OPENCLAW_CONFIG_PATH } from "@/lib/openclaw-paths";
-import { execOpenclaw, parseOpenclawJsonOutput } from "@/lib/openclaw-cli";
-import { OPENCLAW_HOME } from "@/lib/openclaw-paths";
+import { detectAndFixOpenclawHome, getResolvedConfigPath, getResolvedOpenclawHome } from "@/lib/openclaw-home-detect";
+import { execOpenclaw, parseOpenclawJsonOutput, stripOpenclawCliLogNoise } from "@/lib/openclaw-cli";
 
 type ChatRole = "system" | "user" | "assistant";
 
@@ -13,7 +12,7 @@ interface ChatMessage {
 }
 
 function readGatewayConfig(): { host: string; port: number; token: string } {
-  const raw = fs.readFileSync(OPENCLAW_CONFIG_PATH, "utf-8");
+  const raw = fs.readFileSync(getResolvedConfigPath(), "utf-8");
   const config = JSON.parse(raw);
   const hostRaw = String(config?.gateway?.host || config?.gateway?.hostname || "127.0.0.1");
   const host = hostRaw === "localhost" ? "127.0.0.1" : hostRaw;
@@ -39,7 +38,8 @@ function normalizeMessages(input: any): ChatMessage[] {
 function resolveSessionId(agentId: string, sessionKey: string, sessionId: string | null): string | null {
   if (sessionId) return sessionId;
   try {
-    const sessionsPath = path.join(OPENCLAW_HOME, "agents", agentId, "sessions", "sessions.json");
+    const home = getResolvedOpenclawHome();
+    const sessionsPath = path.join(home, "agents", agentId, "sessions", "sessions.json");
     if (!fs.existsSync(sessionsPath)) return null;
     const raw = fs.readFileSync(sessionsPath, "utf-8");
     const sessions = JSON.parse(raw);
@@ -51,28 +51,51 @@ function resolveSessionId(agentId: string, sessionKey: string, sessionId: string
   }
 }
 
+function extractTextFromPayloadItem(p: any): string | null {
+  if (!p || typeof p !== "object") return null;
+  const t = p.text ?? p.body ?? p.content;
+  if (typeof t === "string" && t.trim()) return t.trim();
+  return null;
+}
+
+/** OpenClaw `agent --json` 多为顶层 `{ payloads, meta }`；网关 RPC 可能带 `result` 包裹 */
 function extractReply(parsed: any, stdout = ""): string {
-  const payloadText = parsed?.result?.payloads?.find?.((p: any) => typeof p?.text === "string" && p.text.trim())?.text;
-  if (typeof payloadText === "string" && payloadText.trim()) {
-    return payloadText.trim();
+  const payloadArrays: any[][] = [];
+  if (Array.isArray(parsed?.payloads)) payloadArrays.push(parsed.payloads);
+  if (Array.isArray(parsed?.result?.payloads)) payloadArrays.push(parsed.result.payloads);
+  if (Array.isArray(parsed?.result?.result?.payloads)) payloadArrays.push(parsed.result.result.payloads);
+
+  for (const arr of payloadArrays) {
+    for (const item of arr) {
+      const t = extractTextFromPayloadItem(item);
+      if (t) return stripOpenclawCliLogNoise(t);
+    }
   }
 
   const contentText = parsed?.result?.content?.text || parsed?.result?.content;
   if (typeof contentText === "string" && contentText.trim()) {
-    return contentText.trim();
+    return stripOpenclawCliLogNoise(contentText.trim());
   }
 
-  return String(
+  const choiceContent = parsed?.choices?.[0]?.message?.content;
+  if (typeof choiceContent === "string" && choiceContent.trim()) {
+    return stripOpenclawCliLogNoise(choiceContent.trim());
+  }
+
+  const raw = String(
     parsed?.reply ||
     parsed?.text ||
     parsed?.outputText ||
+    parsed?.summary ||
     parsed?.result?.reply ||
     parsed?.result?.text ||
+    parsed?.result?.summary ||
     parsed?.response?.text ||
     parsed?.response?.output_text ||
     parsed?.message ||
     "",
   ).trim();
+  return stripOpenclawCliLogNoise(raw);
 }
 
 async function cliChatFallback(
@@ -81,21 +104,26 @@ async function cliChatFallback(
   userMessage: string,
   fastMode: boolean,
 ): Promise<{ ok: boolean; reply?: string; error?: string }> {
+  detectAndFixOpenclawHome();
   const attempts: string[][] = [];
   const timeoutSec = fastMode ? "45" : "90";
   const thinking = fastMode ? "off" : "minimal";
+  const tail = ["--json", "--timeout", timeoutSec, "--thinking", thinking] as const;
+  const execTimeoutMs = (Number(timeoutSec) + 30) * 1000;
+  // 先走 --local：跳过「CLI→网关→再嵌套 embedded」，避免网关异常时误报 Unknown agent id、并减少等待。
   if (sessionId) {
-    // Prefer session-bound call first so we don't rely on agent id resolution.
-    attempts.push(["agent", "--session-id", sessionId, "--message", userMessage, "--json", "--timeout", timeoutSec, "--thinking", thinking]);
+    attempts.push(["agent", "--local", "--session-id", sessionId, "--message", userMessage, ...tail]);
+    attempts.push(["agent", "--session-id", sessionId, "--message", userMessage, ...tail]);
   }
   if (agentId) {
-    attempts.push(["agent", "--agent", agentId, "--message", userMessage, "--json", "--timeout", timeoutSec, "--thinking", thinking]);
+    attempts.push(["agent", "--local", "--agent", agentId, "--message", userMessage, ...tail]);
+    attempts.push(["agent", "--agent", agentId, "--message", userMessage, ...tail]);
   }
 
   let lastError = "CLI fallback failed";
   for (const args of attempts) {
     try {
-      const { stdout, stderr } = await execOpenclaw(args);
+      const { stdout, stderr } = await execOpenclaw(args, { timeoutMs: execTimeoutMs });
       const parsed = parseOpenclawJsonOutput(stdout, stderr);
       const parsedError = String(parsed?.error?.message || parsed?.error || "").trim();
       if (parsedError) {
@@ -104,7 +132,7 @@ async function cliChatFallback(
       }
       const reply = extractReply(parsed, stdout);
       if (reply) return { ok: true, reply };
-      const plain = String(stdout || "").trim();
+      const plain = stripOpenclawCliLogNoise(String(stdout || "").trim());
       if (plain && !plain.startsWith("{")) {
         return { ok: true, reply: plain.slice(0, 4000) };
       }
@@ -112,6 +140,11 @@ async function cliChatFallback(
     } catch (err: any) {
       lastError = String(err?.message || "CLI fallback failed").trim() || lastError;
     }
+  }
+  if (/unknown agent id/i.test(lastError)) {
+    lastError = `${lastError}\n\n提示：若终端里 openclaw agents list 能看到该专家，多为 CLI 子进程读错配置目录。请拉取最新代码并重启面板；子进程已强制 OPENCLAW_STATE_DIR / OPENCLAW_CONFIG_PATH，且回退时优先 --local。`;
+  } else if (/session file locked|\.jsonl\.lock/i.test(lastError)) {
+    lastError = `${lastError}\n\n提示：当前会话的 jsonl 正被其他进程占用（常见是网关 Gateway 正在跑同一 session）。可尝试：重启 OpenClaw 网关、或暂时关掉网关再试面板回退、或点「WEB聊天模式」走网关内置页。`;
   }
   return { ok: false, error: lastError };
 }
@@ -179,7 +212,10 @@ export async function POST(req: Request) {
 
     if (!resp.ok) {
       const errorText = (data?.error?.message || raw || `HTTP ${resp.status}`).trim();
-      const fallbackNeeded = resp.status === 404 || /not found/i.test(errorText);
+      const fallbackNeeded =
+        resp.status === 404 ||
+        resp.status === 405 ||
+        /not found|method not allowed/i.test(errorText);
       if (!fallbackNeeded) {
         return NextResponse.json(
           {

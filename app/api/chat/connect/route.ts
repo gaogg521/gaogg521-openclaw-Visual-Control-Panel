@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import { OPENCLAW_CONFIG_PATH, OPENCLAW_HOME } from "@/lib/openclaw-paths";
+import { getResolvedConfigPath, getResolvedOpenclawHome } from "@/lib/openclaw-home-detect";
 import { enforceLocalRequest } from "@/lib/api-local-guard";
 
 function parseSessions(agentId: string) {
-  const sessionsPath = path.join(OPENCLAW_HOME, `agents/${agentId}/sessions/sessions.json`);
+  const home = getResolvedOpenclawHome();
+  const sessionsPath = path.join(home, `agents/${agentId}/sessions/sessions.json`);
   if (!fs.existsSync(sessionsPath)) return [];
   const raw = fs.readFileSync(sessionsPath, "utf-8");
   const sessions = JSON.parse(raw);
@@ -30,7 +31,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Missing agentId" }, { status: 400 });
     }
 
-    const cfgRaw = fs.readFileSync(OPENCLAW_CONFIG_PATH, "utf-8");
+    const cfgRaw = fs.readFileSync(getResolvedConfigPath(), "utf-8");
     const cfg = JSON.parse(cfgRaw);
     const token = String(cfg?.gateway?.auth?.token || "");
     const authMode = String(cfg?.gateway?.auth?.mode || "");

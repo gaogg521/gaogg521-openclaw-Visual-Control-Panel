@@ -4,9 +4,41 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import { promisify } from "util";
+import { getResolvedOpenclawHome } from "@/lib/openclaw-home-detect";
 import { getOpenclawPackageCandidates } from "@/lib/openclaw-paths";
 
 const execFileAsync = promisify(execFile);
+
+/**
+ * OpenClaw CLI（paths 模块）语义：OPENCLAW_HOME = 用户主目录，再在底下拼 `.openclaw` 作为状态目录。
+ * 本面板与 README 里常把 OPENCLAW_HOME 设为「已含 openclaw.json 的状态目录」。
+ * 若把状态目录误传给 CLI 的 OPENCLAW_HOME，会解析成 `…/.openclaw/.openclaw`，agents.list 读错 → Unknown agent id。
+ */
+function openclawChildEnv(): NodeJS.ProcessEnv {
+  const stateDir = getResolvedOpenclawHome();
+  const configPath = path.join(stateDir, "openclaw.json");
+  const userHome =
+    (process.env.USERPROFILE && process.env.USERPROFILE.trim()) ||
+    (process.env.HOME && process.env.HOME.trim()) ||
+    os.homedir();
+  return {
+    ...process.env,
+    FORCE_COLOR: "0",
+    OPENCLAW_HOME: userHome,
+    OPENCLAW_STATE_DIR: stateDir,
+    OPENCLAW_CONFIG_PATH: configPath,
+  };
+}
+
+function openclawExecCwd(): string {
+  try {
+    const d = getResolvedOpenclawHome();
+    if (d && fs.existsSync(d)) return d;
+  } catch {
+    /* ignore */
+  }
+  return process.cwd();
+}
 
 /**
  * 解析 openclaw 可执行文件路径。
@@ -100,7 +132,8 @@ export async function execOpenclaw(
   opts?: { timeoutMs?: number; preferExecutable?: boolean },
 ): Promise<{ stdout: string; stderr: string }> {
   const mjs = opts?.preferExecutable ? null : resolveOpenclawMjsPath();
-  const baseEnv = { ...process.env, FORCE_COLOR: "0" };
+  const baseEnv = openclawChildEnv();
+  const cwd = openclawExecCwd();
   const timeout = opts?.timeoutMs;
   let r: { stdout: string | Buffer; stderr: string | Buffer };
 
@@ -108,14 +141,18 @@ export async function execOpenclaw(
     r = await execFileAsync(process.execPath, [mjs, ...args], {
       encoding: "utf8",
       maxBuffer: 10 * 1024 * 1024,
+      cwd,
       ...(typeof timeout === "number" ? { timeout } : {}),
       env: baseEnv,
       windowsHide: true,
     });
   } else {
     const exe = resolveOpenclawExecutable();
+    const shellOpts = execOptionsForOpenclaw(exe);
     r = await execFileAsync(exe, args, {
-      ...execOptionsForOpenclaw(exe),
+      ...shellOpts,
+      cwd,
+      env: { ...shellOpts.env, ...baseEnv },
       ...(typeof timeout === "number" ? { timeout } : {}),
     });
   }
@@ -135,7 +172,8 @@ export function execOpenclawWithExitCode(
   opts?: { timeoutMs?: number },
 ): Promise<{ code: number; stdout: string; stderr: string }> {
   const mjs = resolveOpenclawMjsPath();
-  const baseEnv = { ...process.env, FORCE_COLOR: "0" };
+  const baseEnv = openclawChildEnv();
+  const cwd = openclawExecCwd();
 
   return new Promise((resolve, reject) => {
     const finish = (
@@ -171,6 +209,7 @@ export function execOpenclawWithExitCode(
         {
           encoding: "utf8",
           maxBuffer: 10 * 1024 * 1024,
+          cwd,
           ...(typeof opts?.timeoutMs === "number" ? { timeout: opts.timeoutMs } : {}),
           env: baseEnv,
           windowsHide: true,
@@ -179,11 +218,14 @@ export function execOpenclawWithExitCode(
       );
     } else {
       const exe = resolveOpenclawExecutable();
+      const shellOpts = execOptionsForOpenclaw(exe);
       execFile(
         exe,
         args,
         {
-          ...execOptionsForOpenclaw(exe),
+          ...shellOpts,
+          cwd,
+          env: { ...shellOpts.env, ...baseEnv },
           encoding: "utf8",
           maxBuffer: 10 * 1024 * 1024,
           ...(typeof opts?.timeoutMs === "number" ? { timeout: opts.timeoutMs } : {}),
@@ -237,6 +279,28 @@ export function parseJsonFromMixedOutput(output: string): any {
   return null;
 }
 
+/**
+ * OpenClaw CLI 常把插件注册、诊断等写到 stdout/stderr；勿当作聊天正文展示。
+ */
+export function stripOpenclawCliLogNoise(text: string): string {
+  return String(text || "")
+    .split(/\r?\n/)
+    .filter((line) => {
+      const t = line.trim();
+      if (!t) return false;
+      if (/^\[plugins\]/i.test(t)) return false;
+      if (/^\[diagnostic\]/i.test(t)) return false;
+      if (/^\[openclaw\]/i.test(t)) return false;
+      if (/^\[model-fallback/i.test(t)) return false;
+      if (/^\[agent\/embedded\]/i.test(t)) return false;
+      if (/^\[agent\]\s/i.test(t)) return false;
+      if (/^\s*at\s+/.test(t)) return false;
+      return true;
+    })
+    .join("\n")
+    .trim();
+}
+
 export function parseOpenclawJsonOutput(stdout: string, stderr = ""): any {
   const trimmed = stdout.trim();
   if (trimmed) {
@@ -246,6 +310,8 @@ export function parseOpenclawJsonOutput(stdout: string, stderr = ""): any {
       // Fallback below.
     }
   }
+  const fromStdout = parseJsonFromMixedOutput(stdout);
+  if (fromStdout != null) return fromStdout;
   return parseJsonFromMixedOutput(`${stdout}\n${stderr}`);
 }
 
