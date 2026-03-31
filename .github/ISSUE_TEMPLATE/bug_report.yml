@@ -1,0 +1,60 @@
+name: Bug 报告
+description: 面板异常、构建失败或接口错误
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请先 [搜索已有 Issue](https://github.com/gaogg521/gaogg521-openclaw-Visual-Control-Panel/issues)，避免重复。
+  - type: textarea
+    id: summary
+    attributes:
+      label: 简要描述
+      description: 一句话说明问题
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 从克隆/启动到出错的步骤，越具体越好
+      placeholder: |
+        1. …
+        2. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: 环境
+      description: OS、Node 版本、运行方式（npm run dev / Docker / Electron）、是否与 OpenClaw Gateway 联调
+      placeholder: |
+        - OS:
+        - Node:
+        - 分支/commit:
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志 / 截图
+      description: 请脱敏（去掉 Token、域名、个人路径）。可贴浏览器 Network 或终端输出。
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: 确认
+      options:
+        - label: 我已阅读 CONTRIBUTING.md，并尽可能提供了可复现信息
+          required: true

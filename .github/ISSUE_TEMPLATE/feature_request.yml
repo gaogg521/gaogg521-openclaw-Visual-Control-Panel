@@ -1,0 +1,30 @@
+name: 功能建议
+description: 新能力或体验改进（请先确认与 OpenClaw 官方职责的边界）
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 要解决的用户问题
+      description: 谁在什么场景下遇到困难？
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议方案
+      description: 你希望面板如何表现？可附草图或对标产品。
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: 与 OpenClaw 官方 CLI / Gateway 的关系
+      description: 是否仅需改本仓库即可？是否依赖上游新 API？
+  - type: checkboxes
+    id: willing
+    attributes:
+      label: 参与意愿
+      options:
+        - label: 我愿意提交 PR 实现（或部分实现）
+          required: false

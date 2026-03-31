@@ -421,6 +421,17 @@ docker run -d -p 3000:3000 openclaw-dashboard
 docker run -d --name openclaw-dashboard -p 3000:3000 -e OPENCLAW_HOME=/opt/openclaw -v /path/to/openclaw:/opt/openclaw openclaw-dashboard
 ```
 
+## Contributing
+
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** — full guide (Chinese)
+- **[CONTRIBUTING.en.md](CONTRIBUTING.en.md)** — short English summary
+- **[CODE_STANDARDS.md](CODE_STANDARDS.md)** — **code standards** for humans and any AI coding tools
+- **[AGENTS.md](AGENTS.md)** — stub redirect to `CODE_STANDARDS.md` (not the per-agent `AGENTS.md` under `OPENCLAW_HOME`)
+- **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** — community standards
+- **[SECURITY.md](SECURITY.md)** — how to report security issues
+
+Upstream repo: **[gaogg521/gaogg521-openclaw-Visual-Control-Panel](https://github.com/gaogg521/gaogg521-openclaw-Visual-Control-Panel)**
+
 ## Community (Feishu & WeChat)
 
 Questions, install help, or feedback: scan the **Feishu group** or **WeChat** QR codes below (PNG files live under [`docs/`](docs/); replace them when your codes rotate).

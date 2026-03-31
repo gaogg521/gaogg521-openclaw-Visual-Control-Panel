@@ -20,6 +20,8 @@
   &nbsp;·&nbsp;
   <a href="#tech-stack">技术栈</a>
   &nbsp;·&nbsp;
+  <a href="#contributing">参与贡献</a>
+  &nbsp;·&nbsp;
   <a href="#community">交流</a>
 </p>
 
@@ -436,6 +438,23 @@ npm install
 ### Docker 说明
 
 与本地 `npm run dev`（**3003**）不同，**Dockerfile** 内进程使用 **`PORT=3000`**，映射端口时请使用 `-p 3000:3000`（或自行改 Dockerfile / 环境变量）。
+
+<a id="contributing"></a>
+
+## 参与贡献
+
+欢迎提交 Issue 与 Pull Request。请先阅读：
+
+| 文档 | 说明 |
+|------|------|
+| **[CONTRIBUTING.md](CONTRIBUTING.md)** | 贡献流程、分支与提交规范、PR 自检清单（**主文档**） |
+| **[CONTRIBUTING.en.md](CONTRIBUTING.en.md)** | English quick guide |
+| **[CODE_STANDARDS.md](CODE_STANDARDS.md)** | **代码规范**（人工与任意 AI 编程工具统一遵守） |
+| **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** | 行为准则 |
+| **[SECURITY.md](SECURITY.md)** | 安全漏洞私下报告方式 |
+| **[AGENTS.md](AGENTS.md)** | 跳转页：指向 **CODE_STANDARDS.md**（勿与 OpenClaw 工作区内各 Agent 的 **`AGENTS.md` 专家文件**混淆） |
+
+**上游仓库（GitHub）：** [gaogg521/gaogg521-openclaw-Visual-Control-Panel](https://github.com/gaogg521/gaogg521-openclaw-Visual-Control-Panel)
 
 <a id="community"></a>
 

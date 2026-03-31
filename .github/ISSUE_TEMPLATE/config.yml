@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 贡献指南（中文）
+    url: https://github.com/gaogg521/gaogg521-openclaw-Visual-Control-Panel/blob/main/CONTRIBUTING.md
+    about: 提交代码前请先阅读 CONTRIBUTING.md
+  - name: Contributing (English)
+    url: https://github.com/gaogg521/gaogg521-openclaw-Visual-Control-Panel/blob/main/CONTRIBUTING.en.md
+    about: Short English contributing guide
