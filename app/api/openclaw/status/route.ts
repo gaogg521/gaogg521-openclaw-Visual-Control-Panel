@@ -132,10 +132,31 @@ export async function GET(request: Request) {
       cfg.workspace ||
       (cfg.agents?.defaults as any)?.workspace ||
       path.join(OPENCLAW_HOME, "workspace");
+
+    const ad = cfg.agents?.defaults as Record<string, unknown> | undefined;
+    const agentsDefaultMax =
+      typeof ad?.maxConcurrent === "number"
+        ? ad.maxConcurrent
+        : typeof ad?.max_concurrent === "number"
+          ? ad.max_concurrent
+          : undefined;
+    const agentsDefaultSub =
+      typeof ad?.subAgentMaxConcurrent === "number"
+        ? ad.subAgentMaxConcurrent
+        : typeof ad?.sub_agent_max_concurrent === "number"
+          ? ad.sub_agent_max_concurrent
+          : typeof ad?.subMaxConcurrent === "number"
+            ? ad.subMaxConcurrent
+            : undefined;
+
+    // 与 OpenClaw 常见配置对齐：顶层 / gateway 优先，其次 agents.defaults（向导或 patch 常只改后者）
     const maxConcurrency =
-      cfg.max_concurrency ?? cfg.gateway?.max_concurrency ?? 4;
+      cfg.max_concurrency ?? cfg.gateway?.max_concurrency ?? agentsDefaultMax ?? 4;
     const subMaxConcurrency =
-      cfg.sub_max_concurrency ?? cfg.gateway?.sub_max_concurrency ?? 8;
+      cfg.sub_max_concurrency ??
+      cfg.gateway?.sub_max_concurrency ??
+      agentsDefaultSub ??
+      8;
 
     return NextResponse.json({
       version: openclawVersion,

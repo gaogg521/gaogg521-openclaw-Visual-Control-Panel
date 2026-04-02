@@ -17,6 +17,101 @@ export interface SkillAgentInfo {
   emoji: string;
 }
 
+/** 面板展示的「从哪扫技能」路径行（与 listOpenclawSkills 扫描逻辑一致） */
+export interface SkillScanPathRow {
+  kind: "builtin" | "extension" | "custom" | "custom-workspace";
+  path: string;
+  exists: boolean;
+  count: number;
+  /** 扩展包目录名，仅 kind === "extension" 且存在子目录时 */
+  packName?: string;
+}
+
+function isDirSafe(dir: string): boolean {
+  try {
+    return fs.statSync(dir).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+function buildSkillScanPathRows(pkg: string, home: string, allSkills: SkillInfo[]): SkillScanPathRow[] {
+  const rows: SkillScanPathRow[] = [];
+  const extTotal = allSkills.filter((s) => s.source.startsWith("extension:")).length;
+
+  const builtinPath = path.join(pkg, "skills");
+  rows.push({
+    kind: "builtin",
+    path: path.resolve(builtinPath),
+    exists: fs.existsSync(builtinPath),
+    count: allSkills.filter((s) => s.source === "builtin").length,
+  });
+
+  const extRoot = path.join(pkg, "extensions");
+  const extRootResolved = path.resolve(extRoot);
+  const extCounts = new Map<string, number>();
+  for (const s of allSkills) {
+    if (!s.source.startsWith("extension:")) continue;
+    const pack = s.source.slice("extension:".length);
+    extCounts.set(pack, (extCounts.get(pack) || 0) + 1);
+  }
+
+  if (!fs.existsSync(extRoot)) {
+    rows.push({
+      kind: "extension",
+      path: extRootResolved,
+      exists: false,
+      count: extTotal,
+    });
+  } else {
+    let packNames: string[] = [];
+    try {
+      packNames = fs
+        .readdirSync(extRoot)
+        .filter((n) => isDirSafe(path.join(extRoot, n)))
+        .sort();
+    } catch {
+      packNames = [];
+    }
+    if (packNames.length === 0) {
+      rows.push({
+        kind: "extension",
+        path: extRootResolved,
+        exists: true,
+        count: extTotal,
+      });
+    } else {
+      for (const name of packNames) {
+        rows.push({
+          kind: "extension",
+          path: path.resolve(path.join(extRoot, name)),
+          exists: true,
+          count: extCounts.get(name) ?? 0,
+          packName: name,
+        });
+      }
+    }
+  }
+
+  const customPath = path.join(home, "skills");
+  rows.push({
+    kind: "custom",
+    path: path.resolve(customPath),
+    exists: fs.existsSync(customPath),
+    count: allSkills.filter((s) => s.source === "custom").length,
+  });
+
+  const wsPath = path.join(home, "workspace", "skills");
+  rows.push({
+    kind: "custom-workspace",
+    path: path.resolve(wsPath),
+    exists: fs.existsSync(wsPath),
+    count: allSkills.filter((s) => s.source === "custom-workspace").length,
+  });
+
+  return rows;
+}
+
 function findOpenClawPkg(): string {
   const candidates = getOpenclawPackageCandidates();
   for (const candidate of candidates) {
@@ -108,7 +203,12 @@ function getAgentSkillsFromSessions(): Record<string, Set<string>> {
   return result;
 }
 
-export function listOpenclawSkills(): { skills: SkillInfo[]; agents: Record<string, SkillAgentInfo>; total: number } {
+export function listOpenclawSkills(options?: { includeScanPaths?: boolean }): {
+  skills: SkillInfo[];
+  agents: Record<string, SkillAgentInfo>;
+  total: number;
+  scanPaths?: SkillScanPathRow[];
+} {
   const builtinSkills = scanSkillsDir(path.join(OPENCLAW_PKG, "skills"), "builtin");
 
   const extDir = path.join(OPENCLAW_PKG, "extensions");
@@ -126,7 +226,14 @@ export function listOpenclawSkills(): { skills: SkillInfo[]; agents: Record<stri
   }
 
   const customSkills = scanSkillsDir(path.join(OPENCLAW_HOME, "skills"), "custom");
-  const allSkills = [...builtinSkills, ...extSkills, ...customSkills];
+  const workspaceSkills = scanSkillsDir(
+    path.join(OPENCLAW_HOME, "workspace", "skills"),
+    "custom-workspace",
+  );
+  const allSkills = [...builtinSkills, ...extSkills, ...customSkills, ...workspaceSkills];
+  const scanPaths = options?.includeScanPaths
+    ? buildSkillScanPathRows(OPENCLAW_PKG, OPENCLAW_HOME, allSkills)
+    : undefined;
 
   const agentSkills = getAgentSkillsFromSessions();
   for (const skill of allSkills) {
@@ -147,7 +254,17 @@ export function listOpenclawSkills(): { skills: SkillInfo[]; agents: Record<stri
     };
   }
 
-  return { skills: allSkills, agents, total: allSkills.length };
+  return {
+    skills: allSkills,
+    agents,
+    total: allSkills.length,
+    ...(scanPaths !== undefined ? { scanPaths } : {}),
+  };
+}
+
+/** 按需拉取路径清单（会完整扫描技能，与 listOpenclawSkills 成本相同） */
+export function getOpenclawSkillScanPaths(): SkillScanPathRow[] {
+  return listOpenclawSkills({ includeScanPaths: true }).scanPaths ?? [];
 }
 
 export function getOpenclawSkillContent(source: string, id: string): { skill: SkillInfo; content: string } | null {

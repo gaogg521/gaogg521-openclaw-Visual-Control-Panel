@@ -18,6 +18,40 @@ interface AgentInfo {
   emoji: string;
 }
 
+interface SkillScanPathRow {
+  kind: "builtin" | "extension" | "custom" | "custom-workspace";
+  path: string;
+  exists: boolean;
+  count: number;
+  packName?: string;
+}
+
+function normalizeScanPathRow(raw: unknown): SkillScanPathRow | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const kind = o.kind;
+  if (kind !== "builtin" && kind !== "extension" && kind !== "custom" && kind !== "custom-workspace") {
+    return null;
+  }
+  const p = typeof o.path === "string" ? o.path : "";
+  if (!p.trim()) return null;
+  return {
+    kind,
+    path: p,
+    exists: Boolean(o.exists),
+    count: typeof o.count === "number" && Number.isFinite(o.count) ? o.count : 0,
+    packName: typeof o.packName === "string" && o.packName.trim() ? o.packName : undefined,
+  };
+}
+
+function scanPathRowLabel(row: SkillScanPathRow, t: (key: string) => string): string {
+  if (row.kind === "builtin") return t("skills.scanPath.builtin");
+  if (row.kind === "custom") return t("skills.scanPath.custom");
+  if (row.kind === "custom-workspace") return t("skills.scanPath.customWorkspace");
+  if (row.packName) return `${t("skills.scanPath.extension")} · ${row.packName}`;
+  return t("skills.scanPath.extensionsRoot");
+}
+
 function normalizeSkill(raw: unknown): Skill | null {
   if (!raw || typeof raw !== "object") return null;
   const value = raw as Record<string, unknown>;
@@ -71,6 +105,9 @@ export default function SkillsPage() {
   const [skillContent, setSkillContent] = useState<Record<string, string>>({});
   const [contentLoading, setContentLoading] = useState(false);
   const [contentError, setContentError] = useState<string | null>(null);
+  const [scanPaths, setScanPaths] = useState<SkillScanPathRow[] | null>(null);
+  const [scanLoading, setScanLoading] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -113,6 +150,34 @@ export default function SkillsPage() {
       cancelled = true;
     };
   }, []);
+
+  const runSkillScan = () => {
+    setScanLoading(true);
+    setScanError(null);
+    fetch("/api/skills/scan-paths")
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data?.error || `HTTP ${response.status}`);
+        }
+        return data;
+      })
+      .then((data) => {
+        if (data?.error) {
+          throw new Error(data.error);
+        }
+        const rawPaths = Array.isArray(data?.scanPaths) ? (data.scanPaths as unknown[]) : [];
+        setScanPaths(
+          rawPaths.map(normalizeScanPathRow).filter((row): row is SkillScanPathRow => row !== null),
+        );
+      })
+      .catch((e) => {
+        setScanError(e instanceof Error ? e.message : String(e));
+      })
+      .finally(() => {
+        setScanLoading(false);
+      });
+  };
 
   useEffect(() => {
     if (!selectedSkill) return;
@@ -170,10 +235,13 @@ export default function SkillsPage() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [selectedSkill]);
 
+  const isCustomSkill = (source: string) =>
+    source === "custom" || source === "custom-workspace";
+
   const filtered = skills.filter((skill) => {
     if (filter === "builtin" && skill.source !== "builtin") return false;
     if (filter === "extension" && !skill.source.startsWith("extension:")) return false;
-    if (filter === "custom" && skill.source !== "custom") return false;
+    if (filter === "custom" && !isCustomSkill(skill.source)) return false;
 
     if (!search) return true;
 
@@ -188,12 +256,14 @@ export default function SkillsPage() {
   const sourceLabel = (source: string) => {
     if (source === "builtin") return t("skills.source.builtin");
     if (source.startsWith("extension:")) return source.replace("extension:", `${t("skills.extension")}:`);
+    if (source === "custom-workspace") return t("skills.source.customWorkspace");
     return t("skills.source.custom");
   };
 
   const sourceBadgeClass = (source: string) => {
     if (source === "builtin") return "bg-blue-500/20 text-blue-400";
     if (source.startsWith("extension:")) return "bg-purple-500/20 text-purple-400";
+    if (source === "custom-workspace") return "bg-teal-500/20 text-teal-400";
     return "bg-green-500/20 text-green-400";
   };
 
@@ -218,7 +288,7 @@ export default function SkillsPage() {
 
   const builtinCount = skills.filter((skill) => skill.source === "builtin").length;
   const extensionCount = skills.filter((skill) => skill.source.startsWith("extension:")).length;
-  const customCount = skills.filter((skill) => skill.source === "custom").length;
+  const customCount = skills.filter((skill) => isCustomSkill(skill.source)).length;
 
   return (
     <main className="min-h-screen p-4 md:p-8 max-w-6xl mx-auto">
@@ -230,6 +300,14 @@ export default function SkillsPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={runSkillScan}
+            disabled={scanLoading}
+            className="px-4 py-2 rounded-lg bg-[var(--card)] border border-[var(--border)] text-sm font-medium hover:border-[var(--accent)] transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          >
+            {scanLoading ? t("skills.scanButtonLoading") : scanPaths !== null ? t("skills.scanAgain") : t("skills.scanButton")}
+          </button>
           <Link
             href="/expert-squad"
             className="px-4 py-2 rounded-lg bg-[var(--card)] border border-[var(--border)] text-sm font-medium hover:border-[var(--accent)] transition"
@@ -238,6 +316,53 @@ export default function SkillsPage() {
           </Link>
         </div>
       </div>
+
+      {scanError && (
+        <p className="text-xs text-red-400 mb-4">
+          {t("skills.scanFailed")}: {scanError}
+        </p>
+      )}
+
+      {scanPaths !== null && (
+        <section
+          className="rounded-xl border border-[var(--border)] bg-[var(--card)]/60 p-4 mb-6"
+          aria-label={t("skills.scanPathsTitle")}
+        >
+          <h2 className="text-sm font-semibold text-[var(--text)] mb-1">{t("skills.scanPathsTitle")}</h2>
+          {scanLoading ? (
+            <p className="text-xs text-[var(--text-muted)]">{t("skills.scanPanelLoading")}</p>
+          ) : (
+            <>
+              <p className="text-xs text-[var(--text-muted)] leading-relaxed mb-4">{t("skills.scanPathsHint")}</p>
+              <ul className="space-y-0 divide-y divide-[var(--border)]/80">
+                {scanPaths.map((row, index) => (
+                  <li key={`${row.kind}-${row.path}-${row.packName ?? index}`} className="py-3 first:pt-0">
+                    <div className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:gap-4">
+                      <div className="shrink-0 text-xs font-medium text-[var(--text)] sm:w-52">
+                        {scanPathRowLabel(row, t)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <code className="text-[11px] sm:text-xs text-[var(--text-muted)] break-all leading-relaxed block">
+                          {row.path}
+                        </code>
+                      </div>
+                      <div className="shrink-0 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] sm:text-xs">
+                        <span className={row.exists ? "text-emerald-400/90" : "text-amber-400/90"}>
+                          {row.exists ? t("skills.scanPath.statusOk") : t("skills.scanPath.statusMissing")}
+                        </span>
+                        <span className="text-[var(--text-muted)]">·</span>
+                        <span className="text-[var(--text)] tabular-nums">
+                          {row.count} {t("skills.count")}
+                        </span>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </section>
+      )}
 
       <div className="flex flex-col gap-3 mb-6 md:flex-row md:items-center">
         <div className="flex flex-wrap rounded-lg border border-[var(--border)] overflow-hidden">
