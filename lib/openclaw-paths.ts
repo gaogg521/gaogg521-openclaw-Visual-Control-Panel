@@ -1,5 +1,6 @@
 import os from "os";
 import path from "path";
+import { listPortableOneClawOpenclawPackageDirs } from "@/lib/win-openclaw-path";
 
 const home = os.homedir();
 
@@ -39,8 +40,10 @@ export function getOpenclawPackageCandidates(version = process.version): string[
   const homebrewPrefix = process.env.HOMEBREW_PREFIX;
   const npmPrefix = process.env.npm_config_prefix || process.env.PREFIX;
 
+  const localAppData = process.env.LOCALAPPDATA;
   return uniquePaths([
     process.env.OPENCLAW_PACKAGE_DIR,
+    ...listPortableOneClawOpenclawPackageDirs(),
     path.join(home, ".local", "lib", "node_modules", "openclaw"),
     npmPrefix ? path.join(npmPrefix, "node_modules", "openclaw") : undefined,
     path.join(home, ".nvm", "versions", "node", version, "lib", "node_modules", "openclaw"),
@@ -49,6 +52,7 @@ export function getOpenclawPackageCandidates(version = process.version): string[
     path.join(home, ".local", "share", "pnpm", "global", "5", "node_modules", "openclaw"),
     path.join(home, "Library", "pnpm", "global", "5", "node_modules", "openclaw"),
     appData ? path.join(appData, "npm", "node_modules", "openclaw") : undefined,
+    localAppData ? path.join(localAppData, "npm", "node_modules", "openclaw") : undefined,
     homebrewPrefix ? path.join(homebrewPrefix, "lib", "node_modules", "openclaw") : undefined,
     "/opt/homebrew/lib/node_modules/openclaw",
     "/usr/local/lib/node_modules/openclaw",

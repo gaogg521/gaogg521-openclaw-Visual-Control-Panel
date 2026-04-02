@@ -6,6 +6,7 @@ import os from "os";
 import { promisify } from "util";
 import { getResolvedOpenclawHome } from "@/lib/openclaw-home-detect";
 import { getOpenclawPackageCandidates } from "@/lib/openclaw-paths";
+import { listPortableOneClawOpenclawCmdPaths } from "@/lib/win-openclaw-path";
 
 const execFileAsync = promisify(execFile);
 
@@ -59,6 +60,14 @@ export function resolveOpenclawExecutable(): string {
     if (appdata) {
       candidates.push(path.join(appdata, "npm", "openclaw.cmd"));
       candidates.push(path.join(appdata, "npm", "openclaw"));
+    }
+    const localAppData = process.env.LOCALAPPDATA || "";
+    if (localAppData) {
+      candidates.push(path.join(localAppData, "npm", "openclaw.cmd"));
+      candidates.push(path.join(localAppData, "npm", "openclaw"));
+    }
+    for (const c of listPortableOneClawOpenclawCmdPaths()) {
+      candidates.push(c);
     }
     candidates.push(path.join(home, "scoop", "shims", "openclaw.exe"));
     candidates.push(path.join(home, "scoop", "shims", "openclaw.cmd"));
@@ -169,9 +178,9 @@ export async function execOpenclaw(
  */
 export function execOpenclawWithExitCode(
   args: string[],
-  opts?: { timeoutMs?: number },
+  opts?: { timeoutMs?: number; preferExecutable?: boolean },
 ): Promise<{ code: number; stdout: string; stderr: string }> {
-  const mjs = resolveOpenclawMjsPath();
+  const mjs = opts?.preferExecutable ? null : resolveOpenclawMjsPath();
   const baseEnv = openclawChildEnv();
   const cwd = openclawExecCwd();
 

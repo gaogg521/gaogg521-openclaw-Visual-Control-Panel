@@ -21,6 +21,8 @@ switch ($chk) {
   default { exit $chk }
 }
 
+. (Join-Path $PSScriptRoot "ensure-node22-portable.ps1")
+
 $env:SHARP_IGNORE_GLOBAL_LIBVIPS = if ($env:SHARP_IGNORE_GLOBAL_LIBVIPS) { $env:SHARP_IGNORE_GLOBAL_LIBVIPS } else { "1" }
 $env:OPENCLAW_NO_ONBOARD = "1"
 

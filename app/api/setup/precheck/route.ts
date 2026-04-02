@@ -7,6 +7,7 @@ import {
   resolveOpenclawMjsPath,
 } from "@/lib/openclaw-cli";
 import { detectAndFixOpenclawHome, getResolvedConfigPath } from "@/lib/openclaw-home-detect";
+import { augmentWindowsPathForOpenclawProbe } from "@/lib/win-openclaw-path";
 
 export const runtime = "nodejs";
 
@@ -44,6 +45,7 @@ async function probeOpenclawVersion(): Promise<VersionProbeResult> {
     }
     if (attempt < 2) {
       tryRefreshWindowsPath();
+      augmentWindowsPathForOpenclawProbe();
       detectAndFixOpenclawHome();
       await sleep(250);
     }
@@ -127,6 +129,7 @@ export async function GET(req: Request) {
 
   // 刷新 PATH：解决 dev 服务器在 openclaw 安装前启动、PATH 未更新的问题
   tryRefreshWindowsPath();
+  augmentWindowsPathForOpenclawProbe();
   // 自动探测 OPENCLAW_HOME（修正无点路径等安装问题）
   detectAndFixOpenclawHome();
 

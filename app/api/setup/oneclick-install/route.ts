@@ -4,6 +4,7 @@ import path from "path";
 import { NextResponse } from "next/server";
 import { execOpenclaw, execOpenclawWithExitCode } from "@/lib/openclaw-cli";
 import { detectAndFixOpenclawHome, getResolvedConfigPath } from "@/lib/openclaw-home-detect";
+import { augmentWindowsPathForOpenclawProbe } from "@/lib/win-openclaw-path";
 
 export const runtime = "nodejs";
 
@@ -35,8 +36,6 @@ function inferVersionFromInstallOutput(stdout: string, stderr: string): string |
   const text = `${stdout || ""}\n${stderr || ""}`;
   const m1 = text.match(/OpenClaw installed successfully\s*\(([^)]+)\)/i);
   if (m1?.[1]?.trim()) return m1[1].trim();
-  const m2 = text.match(/OpenClaw\s+\d{4}\.\d+\.\d+[^\r\n]*/i);
-  if (m2?.[0]?.trim()) return m2[0].trim();
   return null;
 }
 
@@ -45,40 +44,76 @@ function manualInstallCommandForCurrentPlatform(): string {
   return "curl -fsSL https://openclaw.ai/install.sh | bash";
 }
 
-function collectInstallPathHints(stdout: string, stderr: string): string[] {
+/** 仅从安装日志中解析出的路径（可能已删除或从未创建，仅供对照日志）。 */
+function collectPathsFromInstallLog(stdout: string, stderr: string): string[] {
   const text = `${stdout || ""}\n${stderr || ""}`;
   const hints = new Set<string>();
   const add = (v: string | null | undefined) => {
     const s = (v || "").trim();
     if (!s) return;
-    hints.add(s);
+    try {
+      hints.add(path.normalize(s));
+    } catch {
+      hints.add(s);
+    }
   };
-
-  // 从安装日志里提取绝对路径（文件或目录），帮助用户定位已下载内容
   const winPathPattern = /([A-Za-z]:\\[^\r\n"'<>|]+(?:\.(?:exe|msi|zip|7z|log|ps1|cmd|bat))?)/g;
   for (const m of text.matchAll(winPathPattern)) add(m[1]);
   const unixPathPattern = /(\/[^\s"'<>|]+(?:\.(?:sh|pkg|deb|rpm|tar|gz|zip|log))?)/g;
   for (const m of text.matchAll(unixPathPattern)) add(m[1]);
+  return Array.from(hints).slice(0, 16);
+}
 
-  // 增加常见缓存目录提示，避免日志中没明确打印路径时完全黑盒
+/** 仅包含当前进程可见且确实存在的常见目录（避免把「可能会用到的路径」当成已下载）。 */
+function collectPathsExistingOnDisk(): string[] {
+  const out: string[] = [];
+  const addIfDir = (p: string) => {
+    try {
+      if (p && fs.existsSync(p) && fs.statSync(p).isDirectory()) {
+        out.push(path.normalize(p));
+      }
+    } catch {
+      // ignore
+    }
+  };
   if (process.platform === "win32") {
     const localAppData = process.env.LOCALAPPDATA || "";
-    const temp = process.env.TEMP || "";
     const userProfile = process.env.USERPROFILE || "";
-    add(localAppData ? path.join(localAppData, "ONEClaw") : null);
-    add(localAppData ? path.join(localAppData, "ONEClaw", "node-portable") : null);
-    add(localAppData ? path.join(localAppData, "Temp", "openclaw") : null);
-    add(temp || null);
-    add(userProfile ? path.join(userProfile, ".openclaw") : null);
+    const oneClawRoot = localAppData ? path.join(localAppData, "ONEClaw") : "";
+    const nodePortable = oneClawRoot ? path.join(oneClawRoot, "node-portable") : "";
+    const tempOpenclaw = localAppData ? path.join(localAppData, "Temp", "openclaw") : "";
+    const dotOpenclaw = userProfile ? path.join(userProfile, ".openclaw") : "";
+    for (const p of [nodePortable, oneClawRoot, tempOpenclaw, dotOpenclaw]) addIfDir(p);
+    if (nodePortable && fs.existsSync(nodePortable)) {
+      try {
+        for (const name of fs.readdirSync(nodePortable)) {
+          if (/^node-v[\d.]+-win-x64$/i.test(name)) {
+            addIfDir(path.join(nodePortable, name));
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
   } else {
     const home = process.env.HOME || "";
     if (home) {
-      add(path.join(home, ".openclaw"));
-      add(path.join(home, ".cache"));
+      addIfDir(path.join(home, ".openclaw"));
+      addIfDir(path.join(home, ".cache", "openclaw"));
     }
-    add("/tmp");
   }
-  return Array.from(hints).slice(0, 16);
+  return [...new Set(out)].slice(0, 16);
+}
+
+function mergeInstallPathHints(stdout: string, stderr: string): {
+  pathsFromLog: string[];
+  pathsOnDisk: string[];
+  downloadPathHints: string[];
+} {
+  const pathsFromLog = collectPathsFromInstallLog(stdout, stderr);
+  const pathsOnDisk = collectPathsExistingOnDisk();
+  const downloadPathHints = [...new Set([...pathsOnDisk, ...pathsFromLog])].slice(0, 16);
+  return { pathsFromLog, pathsOnDisk, downloadPathHints };
 }
 
 async function probeOpenclawVersionLine(): Promise<string | null> {
@@ -86,8 +121,11 @@ async function probeOpenclawVersionLine(): Promise<string | null> {
   for (let attempt = 0; attempt < 10; attempt++) {
     if (attempt > 0) {
       tryRefreshWindowsPath();
+      augmentWindowsPathForOpenclawProbe();
       detectAndFixOpenclawHome();
       await sleep(900);
+    } else {
+      augmentWindowsPathForOpenclawProbe();
     }
     for (const preferExecutable of [false, true]) {
       try {
@@ -181,50 +219,48 @@ function runCommand(
   });
 }
 
+/** 在调用官方 install.ps1 之前，若系统 PATH 上只有旧版 Node（如 v16）或没有 Node，则解压便携版 Node 22+ 并置于 PATH 最前。
+ *  避免完全依赖 winget/MSI：其在子进程里常出现「下载完成但 PATH 尚未生效 / MSI 挂起」导致 OpenClaw 安装脚本误判失败。 */
+const WINDOWS_NODE_BOOTSTRAP_PS = [
+  "$ErrorActionPreference='Stop';",
+  "function Ensure-Node22Plus {",
+  "  $need=$true;",
+  "  try {",
+  "    if (Get-Command node -ErrorAction SilentlyContinue) {",
+  "      $raw = (node -v 2>&1 | Select-Object -First 1 | Out-String).Trim();",
+  "      if ($raw -match '^v(\\d+)') { if ([int]$Matches[1] -ge 22) { $need=$false } }",
+  "    }",
+  "  } catch {}",
+  "  if (-not $need) { return }",
+  "  $cacheRoot=Join-Path $env:LOCALAPPDATA 'ONEClaw\\node-portable';",
+  "  New-Item -ItemType Directory -Force -Path $cacheRoot | Out-Null;",
+  "  $idx=Invoke-RestMethod -UseBasicParsing -Uri 'https://nodejs.org/dist/index.json';",
+  "  $ver=($idx | Where-Object { $_.version -like 'v22.*' -and ($_.files -contains 'win-x64-zip') } | Select-Object -First 1).version;",
+  "  if (-not $ver) { throw 'Cannot resolve Node.js v22+ win-x64 zip from nodejs.org' };",
+  "  $zipName=('node-' + $ver + '-win-x64.zip');",
+  "  $zipPath=Join-Path $cacheRoot $zipName;",
+  "  $nodeDir=Join-Path $cacheRoot ('node-' + $ver + '-win-x64');",
+  "  if (-not (Test-Path -LiteralPath $nodeDir)) {",
+  "    Invoke-WebRequest -UseBasicParsing -Uri ('https://nodejs.org/dist/' + $ver + '/' + $zipName) -OutFile $zipPath;",
+  "    Expand-Archive -LiteralPath $zipPath -DestinationPath $cacheRoot -Force;",
+  "  }",
+  "  $npmBin=Join-Path $nodeDir 'node_modules\\npm\\bin';",
+  "  $env:Path=($nodeDir + ';' + $npmBin + ';' + $env:Path);",
+  "  Write-Host ('[lobster-setup] Using portable Node ' + $ver + ' at ' + $nodeDir)",
+  "}",
+  "Ensure-Node22Plus;",
+].join(" ");
+
 async function runWindowsOfficialInstall(projectRoot: string): Promise<{
   code: number;
   stdout: string;
   stderr: string;
   commandLabel: string;
 }> {
-  const shouldTryPortableNode = (stdout: string, stderr: string): boolean => {
-    const text = `${stdout}\n${stderr}`.toLowerCase();
-    return (
-      /node\.js\s+not\s+found|nodejs\s+not\s+found|please install node\.js/i.test(text) &&
-      /could not find a package manager|winget|choco|scoop/i.test(text)
-    );
-  };
-
-  const runWithPortableNode = async () => {
-    const script =
-      "$ErrorActionPreference='Stop'; " +
-      "$cacheRoot=Join-Path $env:LOCALAPPDATA 'ONEClaw\\node-portable'; " +
-      "New-Item -ItemType Directory -Force -Path $cacheRoot | Out-Null; " +
-      "$idx=Invoke-RestMethod -UseBasicParsing -Uri 'https://nodejs.org/dist/index.json'; " +
-      "$ver=($idx | Where-Object { $_.version -like 'v22.*' -and ($_.files -contains 'win-x64-zip') } | Select-Object -First 1).version; " +
-      "if (-not $ver) { throw 'Cannot resolve Node.js v22 release'; }; " +
-      "$zipName=('node-' + $ver + '-win-x64.zip'); " +
-      "$zipPath=Join-Path $cacheRoot $zipName; " +
-      "$nodeDir=Join-Path $cacheRoot ('node-' + $ver + '-win-x64'); " +
-      "if (-not (Test-Path -LiteralPath $nodeDir)) { " +
-      "  Invoke-WebRequest -UseBasicParsing -Uri ('https://nodejs.org/dist/' + $ver + '/' + $zipName) -OutFile $zipPath; " +
-      "  Expand-Archive -LiteralPath $zipPath -DestinationPath $cacheRoot -Force; " +
-      "}; " +
-      "$env:Path=($nodeDir + ';' + (Join-Path $nodeDir 'node_modules\\npm\\bin') + ';' + $env:Path); " +
-      "$env:SHARP_IGNORE_GLOBAL_LIBVIPS='1'; " +
-      "$env:OPENCLAW_NO_ONBOARD='1'; " +
-      "iwr -useb https://openclaw.ai/install.ps1 | iex";
-    const args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script];
-    const r = await runCommand("powershell.exe", args, projectRoot);
-    return {
-      ...r,
-      commandLabel: "powershell (portable Node bootstrap + official install.ps1)",
-    };
-  };
-
-  // 先尝试兼容旧脚本参数；失败后退回最稳妥 iwr|iex（与页面提示一致）
+  // 始终先保证 Node 22+ 在当前子进程 PATH 最前，再跑官方脚本（减少对 winget/MSI 同步 PATH 的依赖）
   const cmd1 =
-    "$env:SHARP_IGNORE_GLOBAL_LIBVIPS='1'; " +
+    WINDOWS_NODE_BOOTSTRAP_PS +
+    " $env:SHARP_IGNORE_GLOBAL_LIBVIPS='1'; " +
     "$env:OPENCLAW_NO_ONBOARD='1'; " +
     "& ([scriptblock]::Create((Invoke-WebRequest -UseBasicParsing -Uri 'https://openclaw.ai/install.ps1').Content)) -NoOnboard";
   const args1 = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", cmd1];
@@ -232,22 +268,20 @@ async function runWindowsOfficialInstall(projectRoot: string): Promise<{
   if (r1.code === 0) {
     return {
       ...r1,
-      commandLabel: "powershell (official install.ps1 -NoOnboard)",
+      commandLabel: "powershell (portable Node if needed + official install.ps1 -NoOnboard)",
     };
   }
 
   const cmd2 =
-    "$env:SHARP_IGNORE_GLOBAL_LIBVIPS='1'; " +
+    WINDOWS_NODE_BOOTSTRAP_PS +
+    " $env:SHARP_IGNORE_GLOBAL_LIBVIPS='1'; " +
     "$env:OPENCLAW_NO_ONBOARD='1'; " +
     "iwr -useb https://openclaw.ai/install.ps1 | iex";
   const args2 = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", cmd2];
   const r2 = await runCommand("powershell.exe", args2, projectRoot);
-  if (r2.code !== 0 && shouldTryPortableNode(r2.stdout, r2.stderr)) {
-    return runWithPortableNode();
-  }
   return {
     ...r2,
-    commandLabel: "powershell (iwr https://openclaw.ai/install.ps1 | iex)",
+    commandLabel: "powershell (portable Node if needed + iwr install.ps1 | iex)",
   };
 }
 
@@ -282,6 +316,7 @@ export async function POST(req: Request) {
 
   try {
     tryRefreshWindowsPath();
+    augmentWindowsPathForOpenclawProbe();
     detectAndFixOpenclawHome();
 
     let runResult: { code: number; stdout: string; stderr: string };
@@ -320,13 +355,18 @@ export async function POST(req: Request) {
     }
 
     if (runResult.code !== 0) {
-      const downloadPathHints = collectInstallPathHints(runResult.stdout, runResult.stderr);
+      const { pathsFromLog, pathsOnDisk, downloadPathHints } = mergeInstallPathHints(
+        runResult.stdout,
+        runResult.stderr,
+      );
       return NextResponse.json(
         {
           ok: false,
           command: commandLabel,
           manualCommand,
           downloadPathHints,
+          pathsFromLog,
+          pathsOnDisk,
           code: runResult.code,
           error: runResult.stderr.trim() || runResult.stdout.trim() || `安装失败（exit ${runResult.code}）`,
           stdout: runResult.stdout,
@@ -336,9 +376,14 @@ export async function POST(req: Request) {
       );
     }
 
+    tryRefreshWindowsPath();
+    augmentWindowsPathForOpenclawProbe();
     const versionLine = await probeOpenclawVersionLine();
     if (!versionLine) {
-      const downloadPathHints = collectInstallPathHints(runResult.stdout, runResult.stderr);
+      const { pathsFromLog, pathsOnDisk, downloadPathHints } = mergeInstallPathHints(
+        runResult.stdout,
+        runResult.stderr,
+      );
       const inferredVersion = inferVersionFromInstallOutput(runResult.stdout, runResult.stderr);
       if (inferredVersion) {
         return NextResponse.json({
@@ -346,6 +391,8 @@ export async function POST(req: Request) {
           command: commandLabel,
           manualCommand,
           downloadPathHints,
+          pathsFromLog,
+          pathsOnDisk,
           code: 0,
           message: `ONE CLAW 已安装（${inferredVersion}），正在等待环境变量同步。请点击“我已安装，重新检测”。`,
           version: inferredVersion,
@@ -360,6 +407,8 @@ export async function POST(req: Request) {
           command: commandLabel,
           manualCommand,
           downloadPathHints,
+          pathsFromLog,
+          pathsOnDisk,
           code: 5001,
           error:
             "安装脚本执行后仍无法执行 `openclaw --version`。请检查 PATH，若提示不是内部或外部命令，请修复 PATH 后重试。",
@@ -373,13 +422,18 @@ export async function POST(req: Request) {
     const checks = await runPostInstallChecks();
     const configPath = getResolvedConfigPath();
     const configReady = fs.existsSync(configPath);
-    const downloadPathHints = collectInstallPathHints(runResult.stdout, runResult.stderr);
+    const { pathsFromLog, pathsOnDisk, downloadPathHints } = mergeInstallPathHints(
+      runResult.stdout,
+      runResult.stderr,
+    );
 
     return NextResponse.json({
       ok: true,
       command: commandLabel,
       manualCommand,
       downloadPathHints,
+      pathsFromLog,
+      pathsOnDisk,
       code: 0,
       message: configReady
         ? `ONE CLAW 安装成功（${versionLine}）。`

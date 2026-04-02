@@ -335,6 +335,38 @@ npm install
 
 <small>已有最新 standalone 时可 `npm run electron:dist:skip-next`。托盘内仍可手动打开 **「初始化向导 (/setup)」**。</small>
 
+#### Windows · 生成 NSIS 安装包（`.exe`，照做即可）
+
+在**项目根目录**（含 `package.json` 与 `packaging/electron/`）打开 **PowerShell** 或 **CMD**，先执行过一次 **`npm install`**。
+
+**方式一（一条命令，优先试）**
+
+```bash
+npm run electron:dist
+```
+
+会先执行 **`npm run build`**（生成 `.next/standalone`），再调用 electron-builder 打 **NSIS 安装器**。
+
+**方式二（分两步，更稳）** —— 若方式一在个别环境报错（例如嵌套调用 `npm` 失败），或你已手动 `build` 过：
+
+```bash
+npm run stop
+npm run build
+npm run electron:dist:skip-next
+```
+
+`stop` 用于释放 **3003**，避免构建阶段文件被占用（可选但推荐）。
+
+**打完后安装包在哪**
+
+| 内容 | 路径 |
+|------|------|
+| **给用户安装的 `.exe`** | `packaging/electron/dist/`，文件名形如 **`ONE Claw 龙虾控制台 Setup 1.0.0.exe`**（随 `packaging/electron/package.json` 里 **`version`** 变化） |
+| **带时间戳的归档副本** | `packaging/electron/dist/releases/`（与主 `.exe` 同内容，便于留存历史构建） |
+| **免安装绿色目录** | `packaging/electron/dist/win-unpacked/`（调试安装前效果用） |
+
+更细的参数与 macOS / Linux 见 **[packaging/electron/README.md](packaging/electron/README.md)**。
+
 ---
 
 ### 常用命令一览（路线 A · Node）
@@ -346,6 +378,8 @@ npm install
 | `npm run start` | 启动 standalone 生产服务 |
 | `npm run stop` | 结束占用 **3003** 的进程 |
 | `npm run restart` | 先停再起生产（**不**自动 `build`） |
+| `npm run electron:dist` | **桌面包**：`build` + 打当前系统的 Electron 安装器（Windows 为 `.exe`） |
+| `npm run electron:dist:skip-next` | 已有 **`.next/standalone`** 时只打桌面包（见上文 **Windows · 生成 NSIS**） |
 | `npm run generate-pixel-assets` | 维护：像素资源 |
 | `npm run i18n:merge-sea` | 维护：合并东南亚语言分包 |
 

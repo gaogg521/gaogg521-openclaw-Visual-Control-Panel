@@ -26,16 +26,20 @@ function log(msg, c) {
 
 function run(cmd, args, opts = {}) {
   const win = process.platform === 'win32';
+  // Windows：直接 spawnSync('npm.cmd', …) 在部分环境会报 EINVAL（CreateProcess 对批处理的处理问题）。
+  // 使用 shell: true 走 cmd 解析 PATH，与在终端里手动敲 npm 一致。
+  const npmViaShell = win && (cmd === 'npm' || cmd === 'npx');
   let bin = cmd;
-  if (win) {
+  if (win && !npmViaShell) {
     if (cmd === 'npm') bin = 'npm.cmd';
     else if (cmd === 'npx') bin = 'npx.cmd';
   }
-  const r = spawnSync(bin, args, {
+  const r = spawnSync(npmViaShell ? cmd : bin, args, {
     stdio: 'inherit',
     cwd: opts.cwd,
     env: { ...process.env, ...opts.env },
     windowsHide: win,
+    shell: npmViaShell,
   });
   if (r.error) {
     throw new Error(`${cmd} ${args.join(' ')}: ${r.error.message}`);

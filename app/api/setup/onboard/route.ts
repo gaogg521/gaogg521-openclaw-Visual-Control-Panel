@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
-import { execOpenclaw } from "@/lib/openclaw-cli";
+import { execOpenclawWithExitCode } from "@/lib/openclaw-cli";
 import { detectAndFixOpenclawHome, getResolvedConfigPath } from "@/lib/openclaw-home-detect";
+import { augmentWindowsPathForOpenclawProbe } from "@/lib/win-openclaw-path";
 
 export const runtime = "nodejs";
 
@@ -78,6 +79,10 @@ export async function POST(req: Request) {
     if (auth !== `Bearer ${secret}`) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
+  }
+
+  if (process.platform === "win32") {
+    augmentWindowsPathForOpenclawProbe();
   }
 
   let body: {
@@ -191,13 +196,13 @@ export async function POST(req: Request) {
 
   let stdout = "";
   let stderr = "";
+  let code = 0;
   try {
-    const r = await execOpenclaw(args, {
-      // 在打包后的 Electron 环境中，process.execPath 可能是 app.exe，
-      // 强制走 openclaw.cmd/exe，避免出现「app.exe openclaw.mjs onboard」执行失败。
+    const r = await execOpenclawWithExitCode(args, {
       preferExecutable: true,
       timeoutMs: 90_000,
     });
+    code = r.code;
     stdout = r.stdout;
     stderr = r.stderr;
   } catch (e: unknown) {
@@ -225,13 +230,68 @@ export async function POST(req: Request) {
     );
   }
 
-  return NextResponse.json({
-    ok: true,
-    message: "onboard completed",
-    gatewayPort,
-    ...(await waitForConfigFile()),
-    hint: modelId && provider !== "custom" && provider !== "ollama"
+  detectAndFixOpenclawHome();
+  const combined = `${stdout}\n${stderr}`;
+  const safeLog = combined.replace(/sk-[a-zA-Z0-9_-]{10,}/g, "sk-***").replace(/sk-ant-[a-zA-Z0-9_-]{10,}/g, "sk-ant-***");
+  const wait = await waitForConfigFile(14, 450);
+
+  const hint =
+    modelId && provider !== "custom" && provider !== "ollama"
       ? "Model id was not passed to onboard for this provider; set default model in Models page if needed."
-      : undefined,
-  });
+      : undefined;
+
+  if (code === 0 && wait.exists) {
+    return NextResponse.json({
+      ok: true,
+      message: "onboard completed",
+      gatewayPort,
+      ...wait,
+      hint,
+    });
+  }
+
+  if (code !== 0 && wait.exists) {
+    const gwProbeFail =
+      /gateway did not become reachable|gateway timeout|18789/i.test(combined) ||
+      /未能在.*内.*网关|网关.*超时/i.test(combined);
+    return NextResponse.json({
+      ok: true,
+      partialSuccess: true,
+      gatewayProbeFailed: gwProbeFail,
+      message: gwProbeFail
+        ? "配置已写入，但 Gateway 在 CLI 短时探测内未就绪（Windows 常见）。"
+        : "配置已写入，但 onboard 以非零退出码结束。",
+      detail: safeLog.slice(-4000),
+      gatewayPort,
+      ...wait,
+      hint,
+    });
+  }
+
+  if (code !== 0) {
+    const lower = safeLog.toLowerCase();
+    const friendly =
+      lower.includes("requires explicit risk acknowledgement") || lower.includes("--accept-risk")
+        ? "当前 OpenClaw 版本要求在非交互初始化时显式确认风险（--accept-risk）。已自动处理；请重试。"
+        : lower.includes("invalid url") || lower.includes("invalid custom base url")
+          ? "自定义 API Base URL 格式无效，请检查为 http(s)://... 并重试。"
+          : "openclaw onboard failed";
+    return NextResponse.json(
+      {
+        ok: false,
+        error: friendly,
+        detail: safeLog.slice(-4000),
+      },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json(
+    {
+      ok: false,
+      error: "onboard 已退出成功但未找到 openclaw.json，请展开日志或重试。",
+      detail: safeLog.slice(-4000),
+    },
+    { status: 500 },
+  );
 }

@@ -38,6 +38,12 @@ type OneClickInstallResult = {
   command?: string;
   manualCommand?: string;
   downloadPathHints?: string[];
+  /** 日志里解析出的路径（未必仍存在） */
+  pathsFromLog?: string[];
+  /** 当前磁盘上确实存在的目录 */
+  pathsOnDisk?: string[];
+  verifyDeferred?: boolean;
+  version?: string;
 };
 type InstallPhase = "idle" | "preparing" | "installing" | "detecting" | "done" | "failed";
 type SetupFunnelStats = {
@@ -263,6 +269,7 @@ export default function SetupPage() {
   const [customBaseUrl, setCustomBaseUrl] = useState("https://api.openai.com/v1");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [onboardPartialNote, setOnboardPartialNote] = useState<string | null>(null);
   const [gwPort, setGwPort] = useState(18789);
   const [gwToken, setGwToken] = useState("");
   const [gwHealth, setGwHealth] = useState<{
@@ -296,6 +303,17 @@ export default function SetupPage() {
     [t],
   );
 
+  const refreshGatewayMeta = useCallback(async () => {
+    try {
+      const r = await fetch("/api/config");
+      const d = await r.json();
+      if (d.gateway?.port) setGwPort(Number(d.gateway.port));
+      if (d.gateway?.auth?.token) setGwToken(String(d.gateway.auth.token));
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   useEffect(() => {
     if (step !== 4 || precheck !== "ok") return;
     setGwHealth(null);
@@ -310,6 +328,7 @@ export default function SetupPage() {
         }, ms) as number;
       });
     void (async () => {
+      await refreshGatewayMeta();
       await fetchGatewayHealth(false);
       while (!cancelled) {
         await sleep(15000);
@@ -321,7 +340,7 @@ export default function SetupPage() {
       cancelled = true;
       if (sleepTimer) window.clearTimeout(sleepTimer);
     };
-  }, [step, precheck, fetchGatewayHealth]);
+  }, [step, precheck, fetchGatewayHealth, refreshGatewayMeta]);
 
   const copyText = useCallback((id: string, text: string) => {
     setCopyFailed(false);
@@ -495,6 +514,8 @@ export default function SetupPage() {
           command: d.command,
           manualCommand: d.manualCommand,
           downloadPathHints: Array.isArray(d.downloadPathHints) ? d.downloadPathHints : [],
+          pathsFromLog: Array.isArray(d.pathsFromLog) ? d.pathsFromLog : [],
+          pathsOnDisk: Array.isArray(d.pathsOnDisk) ? d.pathsOnDisk : [],
         });
         return;
       }
@@ -507,6 +528,10 @@ export default function SetupPage() {
         command: d.command,
         manualCommand: d.manualCommand,
         downloadPathHints: Array.isArray(d.downloadPathHints) ? d.downloadPathHints : [],
+        pathsFromLog: Array.isArray(d.pathsFromLog) ? d.pathsFromLog : [],
+        pathsOnDisk: Array.isArray(d.pathsOnDisk) ? d.pathsOnDisk : [],
+        verifyDeferred: d.verifyDeferred === true,
+        version: typeof d.version === "string" ? d.version : undefined,
       });
       bumpFunnel("oneClickInstallSuccess");
       setInstallPhase("detecting");
@@ -606,17 +631,6 @@ export default function SetupPage() {
     setShowLoadingEscape(precheck === "loading");
   }, [precheck]);
 
-  const refreshGatewayMeta = useCallback(async () => {
-    try {
-      const r = await fetch("/api/config");
-      const d = await r.json();
-      if (d.gateway?.port) setGwPort(Number(d.gateway.port));
-      if (d.gateway?.auth?.token) setGwToken(String(d.gateway.auth.token));
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
   const tryAdvanceToReview = () => {
     setErr(null);
     if (provider !== "ollama" && !apiKey.trim()) {
@@ -628,6 +642,7 @@ export default function SetupPage() {
 
   const submit = async () => {
     setErr(null);
+    setOnboardPartialNote(null);
     if (provider !== "ollama" && !apiKey.trim()) {
       setErr(t("setup.errorApiKeyRequired"));
       return;
@@ -650,11 +665,15 @@ export default function SetupPage() {
           gatewayPort: 18789,
         }),
       });
-      const d = await r.json().catch(() => ({}));
+      const d = (await r.json().catch(() => ({}))) as {
+        partialSuccess?: boolean;
+        detail?: string;
+      };
       if (!r.ok) {
-        const msg = typeof d.detail === "string" ? d.detail : d.error || `HTTP ${r.status}`;
+        const msg = typeof d.detail === "string" ? d.detail : (d as { error?: string }).error || `HTTP ${r.status}`;
         throw new Error(msg.slice(0, 800));
       }
+      setOnboardPartialNote(d.partialSuccess === true ? t("setup.onboardPartialNotice") : null);
       await refreshGatewayMeta();
       setStep(4);
     } catch (e: unknown) {
@@ -936,16 +955,20 @@ export default function SetupPage() {
             {installResult ? (
               <div
                 className={`mb-4 rounded-xl border px-3 py-2 text-xs whitespace-pre-wrap break-all ${
-                  installResult.ok
-                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-100"
-                    : "border-red-500/40 bg-red-500/10 text-red-100"
+                  !installResult.ok
+                    ? "border-red-500/40 bg-red-500/10 text-red-100"
+                    : installResult.verifyDeferred
+                      ? "border-amber-500/45 bg-amber-500/10 text-amber-100"
+                      : "border-emerald-500/40 bg-emerald-500/10 text-emerald-100"
                 }`}
                 role="status"
                 aria-live="polite"
               >
                 <p className="font-medium mb-1">
                   {installResult.ok
-                    ? installResult.message || t("setup.precheck.oneClickSuccess")
+                    ? installResult.verifyDeferred && installResult.version
+                      ? t("setup.precheck.oneClickVerifyDeferred").replace(/\{\{v\}\}/g, installResult.version)
+                      : installResult.message || t("setup.precheck.oneClickSuccess")
                     : `${t("setup.precheck.oneClickFailed")}：${installResult.error || "-"}`}
                 </p>
                 {!installResult.ok ? (
@@ -980,54 +1003,137 @@ export default function SetupPage() {
                     </div>
                   </div>
                 ) : null}
-                {installResult.command || installResult.manualCommand || (installResult.downloadPathHints || []).length > 0 ? (
+                {installResult.command ||
+                installResult.manualCommand ||
+                (installResult.pathsOnDisk || []).length > 0 ||
+                (installResult.pathsFromLog || []).length > 0 ||
+                (installResult.downloadPathHints || []).length > 0 ? (
                   <div className="mb-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/45 px-2.5 py-2 text-[11px] text-[var(--text-muted)]">
-                    <p className="mb-1 font-semibold text-[var(--text)]">安装可见信息（非黑盒）</p>
+                    <p className="mb-1 font-semibold text-[var(--text)]">{t("setup.precheck.installVisibleTitle")}</p>
                     {installResult.command ? (
                       <div className="mb-2">
-                        <p className="mb-1">自动执行命令：</p>
+                        <p className="mb-1">{t("setup.precheck.autoCommandLabel")}</p>
                         <pre className="rounded-md border border-[var(--border)] bg-[#0a0d14] p-2 text-[10px] text-emerald-200/90 whitespace-pre-wrap break-all">
                           {installResult.command}
                         </pre>
                       </div>
                     ) : null}
-                    {installResult.downloadPathHints && installResult.downloadPathHints.length > 0 ? (
+                    {(installResult.pathsOnDisk || []).length > 0 ? (
                       <div className="mb-2">
-                        <p className="mb-1">已下载/缓存路径（候选）：</p>
+                        <p className="mb-1">{t("setup.precheck.pathsOnDiskTitle")}</p>
                         <div className="space-y-1">
-                          {installResult.downloadPathHints.map((p, idx) => (
-                            <div key={`${p}-${idx}`} className="flex items-start gap-2">
+                          {(installResult.pathsOnDisk || []).map((p, idx) => (
+                            <div key={`disk-${p}-${idx}`} className="flex items-start gap-2">
+                              <code className="flex-1 rounded-md border border-[var(--border)] bg-[#0a0d14] px-2 py-1 text-[10px] text-emerald-200/90 break-all">
+                                {p}
+                              </code>
+                              {preferWin === true ? (
+                                <button
+                                  type="button"
+                                  onClick={() => void openInstallPath(`dlopen-disk-${idx}`, p)}
+                                  disabled={openingPathId === `dlopen-disk-${idx}`}
+                                  className="shrink-0 rounded-md border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-[10px] text-[var(--text)] hover:border-[var(--accent)]/45 disabled:opacity-60"
+                                >
+                                  {openingPathId === `dlopen-disk-${idx}` ? "打开中..." : "打开"}
+                                </button>
+                              ) : null}
+                              <button
+                                type="button"
+                                onClick={() => copyText(`dlpath-disk-${idx}`, p)}
+                                className="shrink-0 rounded-md border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-[10px] text-[var(--accent)] hover:border-[var(--accent)]/45"
+                              >
+                                {copiedId === `dlpath-disk-${idx}`
+                                  ? `✓ ${t("setup.precheck.copied")}`
+                                  : t("setup.precheck.copy")}
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                    {(installResult.pathsFromLog || []).length > 0 ? (
+                      <div className="mb-2">
+                        <p className="mb-1">{t("setup.precheck.pathsFromLogTitle")}</p>
+                        <div className="space-y-1">
+                          {(installResult.pathsFromLog || []).map((p, idx) => (
+                            <div key={`log-${p}-${idx}`} className="flex items-start gap-2">
                               <code className="flex-1 rounded-md border border-[var(--border)] bg-[#0a0d14] px-2 py-1 text-[10px] text-amber-200/90 break-all">
                                 {p}
                               </code>
                               {preferWin === true ? (
                                 <button
                                   type="button"
-                                  onClick={() => void openInstallPath(`dlopen-${idx}`, p)}
-                                  disabled={openingPathId === `dlopen-${idx}`}
+                                  onClick={() => void openInstallPath(`dlopen-log-${idx}`, p)}
+                                  disabled={openingPathId === `dlopen-log-${idx}`}
                                   className="shrink-0 rounded-md border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-[10px] text-[var(--text)] hover:border-[var(--accent)]/45 disabled:opacity-60"
                                 >
-                                  {openingPathId === `dlopen-${idx}` ? "打开中..." : "打开"}
+                                  {openingPathId === `dlopen-log-${idx}` ? "打开中..." : "打开"}
                                 </button>
                               ) : null}
                               <button
                                 type="button"
-                                onClick={() => copyText(`dlpath-${idx}`, p)}
+                                onClick={() => copyText(`dlpath-log-${idx}`, p)}
                                 className="shrink-0 rounded-md border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-[10px] text-[var(--accent)] hover:border-[var(--accent)]/45"
                               >
-                                {copiedId === `dlpath-${idx}` ? `✓ ${t("setup.precheck.copied")}` : t("setup.precheck.copy")}
+                                {copiedId === `dlpath-log-${idx}`
+                                  ? `✓ ${t("setup.precheck.copied")}`
+                                  : t("setup.precheck.copy")}
                               </button>
                             </div>
                           ))}
                         </div>
-                        {openPathError ? (
-                          <p className="mt-1 text-[10px] text-red-200/90">打开失败：{openPathError}</p>
-                        ) : null}
                       </div>
+                    ) : null}
+                    {(installResult.pathsOnDisk || []).length === 0 &&
+                    (installResult.pathsFromLog || []).length === 0 &&
+                    (installResult.downloadPathHints || []).length > 0 ? (
+                      <div className="mb-2">
+                        <p className="mb-1">{t("setup.precheck.pathsLegacyTitle")}</p>
+                        <div className="space-y-1">
+                          {(installResult.downloadPathHints || []).map((p, idx) => (
+                            <div key={`legacy-${p}-${idx}`} className="flex items-start gap-2">
+                              <code className="flex-1 rounded-md border border-[var(--border)] bg-[#0a0d14] px-2 py-1 text-[10px] text-amber-200/90 break-all">
+                                {p}
+                              </code>
+                              {preferWin === true ? (
+                                <button
+                                  type="button"
+                                  onClick={() => void openInstallPath(`dlopen-legacy-${idx}`, p)}
+                                  disabled={openingPathId === `dlopen-legacy-${idx}`}
+                                  className="shrink-0 rounded-md border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-[10px] text-[var(--text)] hover:border-[var(--accent)]/45 disabled:opacity-60"
+                                >
+                                  {openingPathId === `dlopen-legacy-${idx}` ? "打开中..." : "打开"}
+                                </button>
+                              ) : null}
+                              <button
+                                type="button"
+                                onClick={() => copyText(`dlpath-legacy-${idx}`, p)}
+                                className="shrink-0 rounded-md border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-[10px] text-[var(--accent)] hover:border-[var(--accent)]/45"
+                              >
+                                {copiedId === `dlpath-legacy-${idx}`
+                                  ? `✓ ${t("setup.precheck.copied")}`
+                                  : t("setup.precheck.copy")}
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                    {(installResult.pathsOnDisk || []).length === 0 &&
+                    (installResult.pathsFromLog || []).length === 0 &&
+                    (installResult.downloadPathHints || []).length === 0 &&
+                    (installResult.command || installResult.manualCommand) ? (
+                      <p className="mb-2 text-[10px] opacity-90">{t("setup.precheck.pathsHintEmpty")}</p>
+                    ) : null}
+                    {openPathError ? (
+                      <p className="mt-1 text-[10px] text-red-200/90">
+                        {t("setup.precheck.openPathFailedPrefix")}
+                        {openPathError}
+                      </p>
                     ) : null}
                     {installResult.manualCommand ? (
                       <div>
-                        <p className="mb-1">如自动安装失败，可手动执行：</p>
+                        <p className="mb-1">{t("setup.precheck.manualInstallHint")}</p>
                         <div className="flex items-start gap-2">
                           <pre className="flex-1 rounded-md border border-[var(--border)] bg-[#0a0d14] p-2 text-[10px] text-emerald-200/90 whitespace-pre-wrap break-all">
                             {installResult.manualCommand}
@@ -1502,6 +1608,14 @@ export default function SetupPage() {
                 </div>
                 <h1 className="text-2xl font-bold text-[var(--text)] mb-2">{t("setup.stepDoneTitle")}</h1>
                 <p className="text-sm text-[var(--text-muted)] mb-5">{t("setup.stepDoneSub")}</p>
+                {onboardPartialNote ? (
+                  <div
+                    className="mb-5 rounded-xl border border-amber-500/45 bg-amber-500/10 px-4 py-3 text-left text-xs text-amber-100/95 leading-relaxed"
+                    role="status"
+                  >
+                    {onboardPartialNote}
+                  </div>
+                ) : null}
 
                 {(() => {
                   const variant: "checking" | "ok" | "degraded" | "down" =
@@ -1591,6 +1705,25 @@ export default function SetupPage() {
                   </span>
                   <span className="rounded-full border border-emerald-500/30 px-2 py-1">🖥 Gateway</span>
                   <span className="rounded-full border border-emerald-500/30 px-2 py-1">📊 {t("nav.oneoneDashboard")}</span>
+                </div>
+
+                <div className="mb-5 w-full max-w-md mx-auto rounded-xl border border-[var(--border)] bg-[var(--bg)]/55 px-3 py-2.5 text-left text-[11px] text-[var(--text-muted)] leading-relaxed">
+                  <p className="font-semibold text-[var(--text)] mb-1">{t("setup.done.gatewayTokenTitle")}</p>
+                  <p className="mb-2">{t("setup.done.gatewayTokenExplain")}</p>
+                  {gwToken.trim() ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => copyText("setup-gw-token", gwToken)}
+                        className="rounded-md border border-[var(--border)] bg-[var(--card)] px-2.5 py-1 text-[10px] text-[var(--accent)] hover:border-[var(--accent)]/45"
+                      >
+                        {copiedId === "setup-gw-token" ? `✓ ${t("setup.precheck.copied")}` : t("setup.done.gatewayTokenCopy")}
+                      </button>
+                      <span className="text-[10px] opacity-90">{t("setup.done.gatewayTokenPasteHint")}</span>
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-amber-200/85">{t("setup.done.gatewayTokenMissing")}</p>
+                  )}
                 </div>
 
                 <div className="flex flex-col gap-3">

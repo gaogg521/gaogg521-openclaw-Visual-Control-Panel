@@ -304,6 +304,38 @@ Run from the **project root**. Default port **3003**.
 
 <small>With a fresh standalone already built: **`npm run electron:dist:skip-next`**. Tray menu still has **Setup wizard** → **`/setup`**.</small>
 
+#### Windows · Build the NSIS installer (`.exe`, copy-paste friendly)
+
+From the **project root** (where `package.json` and `packaging/electron/` live), in **PowerShell** or **CMD**, after **`npm install`**.
+
+**Option A — one command (try this first)**
+
+```bash
+npm run electron:dist
+```
+
+Runs **`npm run build`** (produces `.next/standalone`) then **electron-builder** for the **NSIS** installer.
+
+**Option B — two steps (more reliable)** if Option A fails on nested `npm` in some IDEs/CI, or you already built:
+
+```bash
+npm run stop
+npm run build
+npm run electron:dist:skip-next
+```
+
+`stop` frees **3003** so files aren’t locked (optional but recommended).
+
+**Where the installer lands**
+
+| Artifact | Location |
+|----------|----------|
+| **Setup `.exe` for users** | `packaging/electron/dist/` — name like **`ONE Claw 龙虾控制台 Setup 1.0.0.exe`** (follows **`version`** in `packaging/electron/package.json`) |
+| **Timestamped copy** | `packaging/electron/dist/releases/` |
+| **Unpacked app folder** | `packaging/electron/dist/win-unpacked/` |
+
+Details and macOS/Linux: **[packaging/electron/README.md](packaging/electron/README.md)**.
+
 ---
 
 ### Common npm scripts (Track A · Node)
@@ -315,6 +347,8 @@ Run from the **project root**. Default port **3003**.
 | `npm run start` | Start standalone production server |
 | `npm run stop` | Free port **3003** |
 | `npm run restart` | Stop + start prod (**no** auto **`build`**) |
+| `npm run electron:dist` | **Desktop:** `build` + Electron installer for current OS (Windows → `.exe`) |
+| `npm run electron:dist:skip-next` | Desktop pack only when **`.next/standalone`** exists (see **Windows · NSIS** above) |
 | `npm run generate-pixel-assets` | Maintainer: pixel assets |
 | `npm run i18n:merge-sea` | Maintainer: merge SEA locale chunks |
 

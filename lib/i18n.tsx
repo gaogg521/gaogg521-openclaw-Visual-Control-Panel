@@ -473,6 +473,8 @@ const translations: Record<Locale, Record<string, string>> = {
     "setup.errorApiKeyRequired": "請填寫 API Key（Ollama 除外）",
     "setup.stepDoneTitle": "一切就緒！",
     "setup.stepDoneSub": "配置完成，可以開始使用。",
+    "setup.onboardPartialNotice":
+      "設定檔已寫入本機（openclaw.json）。OpenClaw CLI 在約 1.5 秒內未偵測到 Gateway 在 Windows 上很常見，通常不必重開機。請開啟「工作排程器」手動執行「OpenClaw Gateway」，或雙擊使用者目錄下 .openclaw\\gateway.cmd，等待約 10–30 秒後在本頁按「重新檢測網關」。畫面上的 WSL 提示為官方對原生 Windows 的說明，屬可選方案，非完成設定的必要步驟。",
     "setup.openOpenclaw": "打開 ONE CLAW",
     "setup.openDashboard": "打開儀表盤",
     "setup.localOnlyHint": "僅本機可呼叫寫入 API；金鑰只留在你的電腦。",
@@ -549,6 +551,16 @@ const translations: Record<Locale, Record<string, string>> = {
     "setup.precheck.oneClickSuccessPending": "安装脚本已完成。若未自动检测成功，请稍后再点「我已安装，重新检测」。",
     "setup.precheck.oneClickFailed": "一鍵安裝失敗",
     "setup.precheck.oneClickShowLogs": "查看安裝輸出",
+    "setup.precheck.installVisibleTitle": "安裝可見資訊（非黑盒）",
+    "setup.precheck.autoCommandLabel": "自動執行命令：",
+    "setup.precheck.pathsOnDiskTitle": "本機目前存在的目錄（可安全打開）",
+    "setup.precheck.pathsFromLogTitle": "日誌中出現的路徑（僅供對照，可能已刪除或從未建立）",
+    "setup.precheck.pathsLegacyTitle": "路徑提示（舊版介面合併列表）",
+    "setup.precheck.pathsHintEmpty": "未從日誌解析出路徑，且常見目錄尚不存在；請展開「查看安裝輸出」對照日誌。",
+    "setup.precheck.openPathFailedPrefix": "打開失敗：",
+    "setup.precheck.manualInstallHint": "若自動安裝未完全成功，可手動執行：",
+    "setup.precheck.oneClickVerifyDeferred":
+      "安裝腳本已結束且日誌含「已成功安裝」字樣（{{v}}），但本程式仍無法執行 openclaw。這不代表 CLI 已進入系統 PATH。請在新開的 PowerShell 執行 openclaw --version 驗證；若失敗請使用下方手動命令。若成功，請完全退出並重啟本應用後再點「我已安裝，重新檢測」。",
     "setup.progress.start": "開始",
     "setup.progress.provider": "提供商",
     "setup.progress.credentials": "金鑰",
@@ -573,6 +585,13 @@ const translations: Record<Locale, Record<string, string>> = {
     "setup.done.gatewayRecheck": "重新檢測",
     "setup.done.gatewayHintDown": "常見原因：服務仍在啟動、埠被占用或未啟動 Gateway。可在終端執行 openclaw gateway status 查看。",
     "setup.done.gatewayChatUrl": "聊天入口",
+    "setup.done.gatewayTokenTitle": "若 OpenClaw 網頁提示 unauthorized / token missing",
+    "setup.done.gatewayTokenExplain":
+      "這是正常安全機制：本機 Gateway 需要「網關令牌」才能建立 WebSocket。請優先點下方「打開 ONE CLAW」（會自動帶上 token）。若你手動開了 http://127.0.0.1:18789/chat，請在網址後加上 ?token=令牌，或把令牌貼到頁內「網關令牌」欄。",
+    "setup.done.gatewayTokenCopy": "複製網關令牌",
+    "setup.done.gatewayTokenPasteHint": "貼到 OpenClaw Control 的「網關令牌」",
+    "setup.done.gatewayTokenMissing":
+      "目前未從設定檔讀到 gateway.auth.token。請打開使用者目錄下 .openclaw\\openclaw.json，搜尋 gateway → auth → token，手動複製貼上。",
     "setup.done.brandPillChat": "ONE CLAW",
 
     // gateway status
@@ -1088,6 +1107,8 @@ const translations: Record<Locale, Record<string, string>> = {
     "setup.errorApiKeyRequired": "请填写 API Key（Ollama 除外）",
     "setup.stepDoneTitle": "一切就绪！",
     "setup.stepDoneSub": "配置完成，可以开始使用了。",
+    "setup.onboardPartialNotice":
+      "配置文件已写入本机（openclaw.json）。OpenClaw CLI 在约 1.5 秒内未探测到 Gateway 在 Windows 上很常见，通常不必重启电脑。请打开「任务计划程序」手动运行「OpenClaw Gateway」，或双击用户目录下 .openclaw\\gateway.cmd，等待约 10–30 秒后在本页点击「重新检测网关」。界面上的 WSL 提示是官方对原生 Windows 的说明，属于可选方案，不是完成本向导的必要步骤。",
     "setup.openOpenclaw": "打开 ONE CLAW",
     "setup.openDashboard": "打开仪表盘",
     "setup.localOnlyHint": "仅本机可调用写入 API；密钥只留在你的电脑。",
@@ -1164,6 +1185,16 @@ const translations: Record<Locale, Record<string, string>> = {
     "setup.precheck.oneClickSuccessPending": "安装脚本已完成。若未自动检测成功，请稍后再点「我已安装，重新检测」。",
     "setup.precheck.oneClickFailed": "一键安装失败",
     "setup.precheck.oneClickShowLogs": "查看安装输出",
+    "setup.precheck.installVisibleTitle": "安装可见信息（非黑盒）",
+    "setup.precheck.autoCommandLabel": "自动执行命令：",
+    "setup.precheck.pathsOnDiskTitle": "本机当前存在的目录（可安全打开）",
+    "setup.precheck.pathsFromLogTitle": "日志中出现的路径（仅供对照，可能已删除或从未创建）",
+    "setup.precheck.pathsLegacyTitle": "路径提示（旧版界面合并列表）",
+    "setup.precheck.pathsHintEmpty": "未从日志解析出路径，且常见目录尚不存在；请展开「查看安装输出」对照日志。",
+    "setup.precheck.openPathFailedPrefix": "打开失败：",
+    "setup.precheck.manualInstallHint": "若自动安装未完全成功，可手动执行：",
+    "setup.precheck.oneClickVerifyDeferred":
+      "安装脚本已结束且日志含「已成功安装」字样（{{v}}），但本程序仍无法执行 openclaw。这不代表 CLI 已进入系统 PATH。请在新开的 PowerShell 执行 openclaw --version 验证；若失败请使用下方手动命令。若成功，请完全退出并重启本应用后再点「我已安装，重新检测」。",
     "setup.progress.start": "开始",
     "setup.progress.provider": "提供商",
     "setup.progress.credentials": "密钥",
@@ -1188,6 +1219,13 @@ const translations: Record<Locale, Record<string, string>> = {
     "setup.done.gatewayRecheck": "重新检测",
     "setup.done.gatewayHintDown": "常见原因：服务仍在启动、端口被占用或未启动 Gateway。可在终端执行 openclaw gateway status 查看。",
     "setup.done.gatewayChatUrl": "聊天入口",
+    "setup.done.gatewayTokenTitle": "若 OpenClaw 网页提示 unauthorized / token missing",
+    "setup.done.gatewayTokenExplain":
+      "这是正常的安全机制：本机 Gateway 需要「网关令牌」才能建立 WebSocket。请优先点下方「打开 ONE CLAW」（会自动带上 token）。若你手动打开了 http://127.0.0.1:18789/chat，请在网址后加上 ?token=令牌，或把令牌贴到页内「网关令牌」栏。",
+    "setup.done.gatewayTokenCopy": "复制网关令牌",
+    "setup.done.gatewayTokenPasteHint": "粘贴到 OpenClaw Control 的「网关令牌」",
+    "setup.done.gatewayTokenMissing":
+      "当前未从配置文件读到 gateway.auth.token。请打开用户目录下 .openclaw\\openclaw.json，查找 gateway → auth → token，手动复制粘贴。",
     "setup.done.brandPillChat": "ONE CLAW",
 
     // gateway status
@@ -1703,6 +1741,8 @@ const translations: Record<Locale, Record<string, string>> = {
     "setup.errorApiKeyRequired": "API key is required (except for Ollama)",
     "setup.stepDoneTitle": "You're all set!",
     "setup.stepDoneSub": "Configuration finished. You can start using ONE CLAW.",
+    "setup.onboardPartialNotice":
+      "Your config file was saved (openclaw.json). On Windows it is common for the OpenClaw CLI’s short gateway probe (~1.5s) to time out even though setup succeeded—you usually do not need a reboot. Open Task Scheduler and run the “OpenClaw Gateway” task, or double-click .openclaw\\gateway.cmd under your profile, wait ~10–30s, then click “Re-check gateway” on this page. The WSL notice from OpenClaw is optional guidance for native Windows, not a requirement to finish this wizard.",
     "setup.openOpenclaw": "Open ONE CLAW",
     "setup.openDashboard": "Open dashboard",
     "setup.localOnlyHint": "Setup API is localhost-only; keys never leave your machine.",
@@ -1779,6 +1819,16 @@ const translations: Record<Locale, Record<string, string>> = {
     "setup.precheck.oneClickSuccessPending": "Install script finished. If auto-detection has not passed yet, wait a moment and click “I installed it — check again”.",
     "setup.precheck.oneClickFailed": "One-click install failed",
     "setup.precheck.oneClickShowLogs": "Show install logs",
+    "setup.precheck.installVisibleTitle": "Install details (transparent)",
+    "setup.precheck.autoCommandLabel": "Command run automatically:",
+    "setup.precheck.pathsOnDiskTitle": "Folders that exist right now (safe to open)",
+    "setup.precheck.pathsFromLogTitle": "Paths mentioned in logs (may be gone or never created)",
+    "setup.precheck.pathsLegacyTitle": "Path hints (legacy combined list)",
+    "setup.precheck.pathsHintEmpty": "No paths parsed from logs and usual folders are missing; expand install logs to compare.",
+    "setup.precheck.openPathFailedPrefix": "Could not open: ",
+    "setup.precheck.manualInstallHint": "If auto-install did not finish, run manually:",
+    "setup.precheck.oneClickVerifyDeferred":
+      "The installer exited and the log contains a clear “installed successfully” line ({{v}}), but this app still cannot run openclaw. That does not mean the CLI is on your system PATH. In a new PowerShell window run openclaw --version; if it fails, use the manual command below. If it works, fully quit and restart this app, then click “I installed it — check again”.",
     "setup.progress.start": "Start",
     "setup.progress.provider": "Provider",
     "setup.progress.credentials": "Keys",
@@ -1803,6 +1853,13 @@ const translations: Record<Locale, Record<string, string>> = {
     "setup.done.gatewayRecheck": "Check again",
     "setup.done.gatewayHintDown": "Common causes: still starting, port in use, or Gateway not running. Try openclaw gateway status in a terminal.",
     "setup.done.gatewayChatUrl": "Chat URL",
+    "setup.done.gatewayTokenTitle": "If the OpenClaw web UI says unauthorized / token missing",
+    "setup.done.gatewayTokenExplain":
+      "This is expected: the local Gateway requires a gateway token for WebSockets. Prefer “Open ONE CLAW” below (it appends ?token= automatically). If you opened http://127.0.0.1:18789/chat manually, add ?token=YOUR_TOKEN to the URL or paste the token into the “Gateway token” field in OpenClaw Control.",
+    "setup.done.gatewayTokenCopy": "Copy gateway token",
+    "setup.done.gatewayTokenPasteHint": "Paste into OpenClaw Control → Gateway token",
+    "setup.done.gatewayTokenMissing":
+      "Could not read gateway.auth.token from config. Open .openclaw\\openclaw.json under your profile, find gateway.auth.token, and paste it manually.",
     "setup.done.brandPillChat": "ONE CLAW",
 
     // gateway status
