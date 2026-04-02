@@ -466,13 +466,13 @@ docker run -d --name openclaw-dashboard -p 3000:3000 -e OPENCLAW_HOME=/opt/openc
 
 Upstream repo: **[gaogg521/gaogg521-openclaw-Visual-Control-Panel](https://github.com/gaogg521/gaogg521-openclaw-Visual-Control-Panel)**
 
-## Community (Feishu & WeChat)
+## Community (QQ Group & WeChat)
 
-Questions, install help, or feedback: scan the **Feishu group** or **WeChat** QR codes below (PNG files live under [`docs/`](docs/); replace them when your codes rotate).
+Questions, install help, or feedback: scan the **QQ group** or **WeChat** QR codes below (PNG files live under [`docs/`](docs/); replace them when your codes rotate).
 
-| Feishu group | WeChat |
-|--------------|--------|
-| ![Feishu group QR](docs/飞书群.png) | ![WeChat QR](docs/微信.png) |
+| QQ group | WeChat |
+|----------|--------|
+| ![QQ group QR](docs/QQ群.png) | ![WeChat QR](docs/微信.png) |
 
 You can also open a GitHub Issue or reach the author on GitHub.
 
