@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import { OPENCLAW_CONFIG_PATH, OPENCLAW_HOME } from "@/lib/openclaw-paths";
-import { parseApiJsonSafely, shouldFallbackToCli, testSessionViaCli } from "@/lib/session-test-fallback";
+import { parseApiJsonSafely, shouldFallbackToCli, shouldFallbackToCliFromFetchError, testSessionViaCli } from "@/lib/session-test-fallback";
 import { enforceLocalRequest } from "@/lib/api-local-guard";
-const CONFIG_PATH = OPENCLAW_CONFIG_PATH;
+import { detectAndFixOpenclawHome, getResolvedConfigPath, getResolvedOpenclawHome } from "@/lib/openclaw-home-detect";
 
 function hasEmbeddedHttpError(reply: string): boolean {
   // Some providers return error text in content while gateway still returns HTTP 200.
@@ -15,7 +14,8 @@ export async function POST(req: Request) {
   const guard = enforceLocalRequest(req, "Test sessions API");
   if (guard) return guard;
   try {
-    const raw = fs.readFileSync(CONFIG_PATH, "utf-8");
+    detectAndFixOpenclawHome();
+    const raw = fs.readFileSync(getResolvedConfigPath(), "utf-8");
     const config = JSON.parse(raw);
     const gatewayPort = config.gateway?.port || 18789;
     const gatewayToken = config.gateway?.auth?.token || "";
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     let agentList = config.agents?.list || [];
     if (agentList.length === 0) {
       try {
-        const agentsDir = path.join(OPENCLAW_HOME, "agents");
+        const agentsDir = path.join(getResolvedOpenclawHome(), "agents");
         const dirs = fs.readdirSync(agentsDir, { withFileTypes: true });
         agentList = dirs
           .filter((d: any) => d.isDirectory() && !d.name.startsWith("."))
@@ -38,14 +38,17 @@ export async function POST(req: Request) {
       const sessionKey = `agent:${agentId}:main`;
       const startTime = Date.now();
       try {
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+          "x-openclaw-agent-id": agentId,
+          "x-openclaw-session-key": sessionKey,
+        };
+        if (gatewayToken) {
+          headers.Authorization = `Bearer ${gatewayToken}`;
+        }
         const resp = await fetch(`http://127.0.0.1:${gatewayPort}/v1/chat/completions`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${gatewayToken}`,
-            "x-openclaw-agent-id": agentId,
-            "x-openclaw-session-key": sessionKey,
-          },
+          headers,
           body: JSON.stringify({
             model: `openclaw:${agentId}`,
             messages: [{ role: "user", content: "Health check: reply with OK" }],
@@ -78,11 +81,31 @@ export async function POST(req: Request) {
       } catch (err: any) {
         const elapsed = Date.now() - startTime;
         const isTimeout = err.name === "TimeoutError" || err.name === "AbortError";
-        results.push({
-          agentId, ok: false,
-          error: isTimeout ? "Timeout (100s)" : (err.message || "Unknown error").slice(0, 300),
-          elapsed,
-        });
+        if (shouldFallbackToCliFromFetchError(err)) {
+          const fallback = await testSessionViaCli(agentId);
+          results.push(
+            fallback.ok
+              ? {
+                  agentId,
+                  ok: true,
+                  reply: `${fallback.reply || "OK"} · CLI（HTTP 不可用）`,
+                  elapsed: Date.now() - startTime,
+                }
+              : {
+                  agentId,
+                  ok: false,
+                  error: isTimeout ? "Timeout (100s)" : (fallback.error || err.message || "Unknown error").slice(0, 300),
+                  elapsed: Date.now() - startTime,
+                },
+          );
+        } else {
+          results.push({
+            agentId,
+            ok: false,
+            error: isTimeout ? "Timeout (100s)" : (err.message || "Unknown error").slice(0, 300),
+            elapsed,
+          });
+        }
       }
     }
 

@@ -3,7 +3,7 @@
 .SYNOPSIS
   若 PATH 上无 Node 或主版本 < 22，则下载并解压 Node.js v22 win-x64 zip 到
   %LOCALAPPDATA%\ONEClaw\node-portable，并把该目录置于当前进程 PATH 最前。
-  供一键安装避免仅依赖 winget/MSI（子进程内 PATH 常未及时更新）。
+  用户级持久化 Path 由 add-openclaw-windows-path.ps1 在安装流程末尾写入。
 #>
 $ErrorActionPreference = "Stop"
 

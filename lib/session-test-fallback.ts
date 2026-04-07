@@ -20,19 +20,26 @@ function extractCliReply(parsed: any, stdout: string): string {
   return (stdout || "(no reply)").trim().slice(0, 200);
 }
 
-export async function testSessionViaCli(agentId: string): Promise<{ ok: boolean; reply?: string; error?: string; elapsed: number }> {
+export async function testSessionViaCli(
+  agentId: string,
+  opts?: { timeoutSec?: number },
+): Promise<{ ok: boolean; reply?: string; error?: string; elapsed: number }> {
   const startTime = Date.now();
+  const timeoutSec = Math.min(120, Math.max(15, opts?.timeoutSec ?? 100));
   try {
-    const { stdout, stderr } = await execOpenclaw([
-      "agent",
-      "--agent",
-      agentId,
-      "--message",
-      "Health check: reply with OK",
-      "--json",
-      "--timeout",
-      "100",
-    ]);
+    const { stdout, stderr } = await execOpenclaw(
+      [
+        "agent",
+        "--agent",
+        agentId,
+        "--message",
+        "Health check: reply with OK",
+        "--json",
+        "--timeout",
+        String(timeoutSec),
+      ],
+      { timeoutMs: (timeoutSec + 5) * 1000 },
+    );
     const elapsed = Date.now() - startTime;
     const parsed = parseJsonFromMixedOutput(`${stdout}\n${stderr || ""}`);
     const error = parsed?.error?.message || parsed?.error;
@@ -50,6 +57,14 @@ export function shouldFallbackToCli(resp: Response, rawText: string): boolean {
   const text = rawText.trim();
   const lower = text.toLowerCase();
   if (resp.status === 404 || text === "Not Found") return true;
+  // HTTP 层能连上，但响应体里是 Gateway/WebSocket 失败（常见于本机网关短时断开）
+  if (
+    /gateway closed|gateway call failed|abnormal closure|normal closure|websocket|econnrefused|connect failed|socket hang up/i.test(
+      lower,
+    )
+  ) {
+    return true;
+  }
   // Some gateways may reject header routing with "agent not configured",
   // while CLI path can still resolve the agent via local config.
   if (
@@ -66,6 +81,14 @@ export function shouldFallbackToCli(resp: Response, rawText: string): boolean {
     return true;
   }
   return false;
+}
+
+/** fetch 抛错时是否值得用 CLI 再试一次 */
+export function shouldFallbackToCliFromFetchError(err: unknown): boolean {
+  const name = err && typeof err === "object" && "name" in err ? String((err as Error).name) : "";
+  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+  if (name === "TimeoutError" || name === "AbortError") return true;
+  return /fetch failed|econnrefused|econnreset|etimedout|network|socket|connect/i.test(msg);
 }
 
 export function parseApiJsonSafely(rawText: string): any {

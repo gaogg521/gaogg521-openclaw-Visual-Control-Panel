@@ -375,12 +375,13 @@ export function AgentCard({
   dmSessionResults?: Record<string, PlatformTestResult | null>;
   providerAccessModeMap?: Record<string, "auth" | "api_key">;
   modelOptions?: AgentModelOptionGroup[];
-  onModelChange?: (agentId: string, model: string) => Promise<void>;
+  onModelChange?: (agentId: string, model: string) => Promise<string | void>;
 }) {
   const [isEditingModel, setIsEditingModel] = useState(false);
   const [draftModel, setDraftModel] = useState(agent.model);
   const [isSavingModel, setIsSavingModel] = useState(false);
   const [modelSaveError, setModelSaveError] = useState<string | null>(null);
+  const [modelSaveNotice, setModelSaveNotice] = useState<string | null>(null);
   const [sessionPreviewOpen, setSessionPreviewOpen] = useState(false);
   const [sessionPreviewLoading, setSessionPreviewLoading] = useState(false);
   const [sessionPreviewError, setSessionPreviewError] = useState<string | null>(null);
@@ -408,6 +409,7 @@ export function AgentCard({
     setSessionPreviewError(null);
     setSessionPreviewOpen(false);
     setSessionPreviewLoading(false);
+    setModelSaveNotice(null);
   }, [agent.id]);
 
   function formatTimeAgo(ts: number): string {
@@ -425,8 +427,10 @@ export function AgentCard({
     if (!onModelChange || !draftModel || draftModel === agent.model) return;
     setIsSavingModel(true);
     setModelSaveError(null);
+    setModelSaveNotice(null);
     try {
-      await onModelChange(agent.id, draftModel);
+      const hint = await onModelChange(agent.id, draftModel);
+      setModelSaveNotice(typeof hint === "string" && hint.trim() ? hint : null);
       setIsEditingModel(false);
     } catch (err: any) {
       setModelSaveError(err?.message || t("agent.modelApplyFailed"));
@@ -564,6 +568,7 @@ export function AgentCard({
                 onClick={() => {
                   setDraftModel(agent.model);
                   setModelSaveError(null);
+                  setModelSaveNotice(null);
                   setIsEditingModel(true);
                 }}
                 className="px-2 py-0.5 rounded-full text-xs border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--accent)] transition"
@@ -622,6 +627,9 @@ export function AgentCard({
                 <p className="text-xs text-red-400">{modelSaveError}</p>
               )}
             </div>
+          )}
+          {modelSaveNotice && (
+            <p className="text-xs text-amber-400/90 mt-2 leading-snug">{modelSaveNotice}</p>
           )}
         </div>
 

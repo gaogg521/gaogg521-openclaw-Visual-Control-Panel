@@ -30,6 +30,8 @@ Write-Host "[openclaw-oneclick] Fetching official install.ps1 ..."
 $src = Invoke-WebRequest -UseBasicParsing -Uri "https://openclaw.ai/install.ps1"
 & ([scriptblock]::Create($src.Content)) -NoOnboard
 
+& (Join-Path $PSScriptRoot "add-openclaw-windows-path.ps1")
+
 $oc = Get-Command openclaw -ErrorAction SilentlyContinue
 if (-not $oc) {
   Write-Warning "openclaw not on PATH. Add npm global prefix to user PATH (see OpenClaw docs), then reopen PowerShell."

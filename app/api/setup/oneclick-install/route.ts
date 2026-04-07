@@ -376,6 +376,29 @@ export async function POST(req: Request) {
       );
     }
 
+    // 官方 install.ps1 完成后写入用户级 Path（便携 Node + %LOCALAPPDATA%\npm），打包 standalone 内脚本见 scripts/copy-standalone-assets.mjs
+    if (process.platform === "win32") {
+      const addPathScript = [
+        path.join(projectRoot, "packaging", "openclaw-oneclick", "scripts", "add-openclaw-windows-path.ps1"),
+        path.join(projectRoot, "scripts", "add-openclaw-windows-path.ps1"),
+      ].find((p) => fs.existsSync(p));
+      if (addPathScript) {
+        const pathFix = await runCommand(
+          "powershell.exe",
+          ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", addPathScript],
+          projectRoot,
+        );
+        if (pathFix.code !== 0) {
+          runResult = {
+            ...runResult,
+            stderr:
+              (runResult.stderr ? `${runResult.stderr}\n` : "") +
+              `[path-fix exit ${pathFix.code}] ${pathFix.stderr.trim() || pathFix.stdout.trim()}`,
+          };
+        }
+      }
+    }
+
     tryRefreshWindowsPath();
     augmentWindowsPathForOpenclawProbe();
     const versionLine = await probeOpenclawVersionLine();

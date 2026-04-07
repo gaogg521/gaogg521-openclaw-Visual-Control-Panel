@@ -82,6 +82,7 @@ export default function Home() {
   const [sessionTestResults, setSessionTestResults] = useState<Record<string, AgentSessionTestResult | null> | null>(null);
   const [testingSessions, setTestingSessions] = useState(false);
   const [dmSessionResults, setDmSessionResults] = useState<Record<string, PlatformTestResult | null> | null>(null);
+  const [testingDmSessions, setTestingDmSessions] = useState(false);
   const [shellOpen, setShellOpen] = useState(false);
   const [shellTitle, setShellTitle] = useState("命令输出");
   const [shellLines, setShellLines] = useState<string[]>([]);
@@ -132,8 +133,17 @@ export default function Home() {
 
   const callTestApi = useCallback(async (url: string) => {
     const requestWithMethod = async (method: "POST" | "GET") => {
-      const resp = await fetch(url, { method, cache: "no-store" });
-      return parseApiPayload(resp);
+      try {
+        const resp = await fetch(url, { method, cache: "no-store" });
+        return parseApiPayload(resp);
+      } catch (err: unknown) {
+        const raw = err instanceof Error ? err.message : String(err);
+        const netFail = /failed to fetch|networkerror|load failed|network request failed/i.test(raw);
+        const hint = netFail
+          ? `无法连接面板接口 ${url}。常见原因：① 探测耗时过长被浏览器断开（已缩短单次超时并改为分批并行，请重试）；② 用局域网 IP 访问时需设置 CONFIG_ALLOW_LAN=1；③ Next 进程未运行或端口错误。(${raw})`
+          : raw;
+        return { ok: false as const, status: 0, data: null, errorText: hint };
+      }
     };
 
     const first = await requestWithMethod("POST");
@@ -177,18 +187,24 @@ export default function Home() {
       });
   }, []);
 
-  const changeAgentModel = useCallback(async (agentId: string, model: string) => {
-    const resp = await fetch("/api/config/agent-model", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ agentId, model }),
-    });
-    const payload = await parseApiPayload(resp);
-    if (!payload.ok) {
-      throw new Error(payload.errorText || t("agent.modelApplyFailed"));
-    }
-    fetchData(true);
-  }, [fetchData, parseApiPayload, t]);
+  const changeAgentModel = useCallback(
+    async (agentId: string, model: string): Promise<string | void> => {
+      const resp = await fetch("/api/config/agent-model", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agentId, model }),
+      });
+      const payload = await parseApiPayload(resp);
+      if (!payload.ok) {
+        throw new Error(payload.errorText || t("agent.modelApplyFailed"));
+      }
+      fetchData(true);
+      if (payload.data?.appliedViaFile) {
+        return t("agent.modelSavedViaFile");
+      }
+    },
+    [fetchData, parseApiPayload, t],
+  );
 
   // 首次加载 - 从 localStorage 恢复测试状态
   useEffect(() => {
@@ -349,6 +365,42 @@ export default function Home() {
         setShellRunning(false);
       });
   }, [data, callTestApi, appendShell, openShell]);
+
+  const testAllDmSessions = useCallback(() => {
+    setTestingDmSessions(true);
+    callTestApi("/api/test-dm-sessions")
+      .then((resp) => {
+        if (resp.results) {
+          setDmSessionResults((prev) => {
+            const next = { ...(prev || {}) };
+            for (const r of resp.results) {
+              next[`${r.agentId}:${r.platform}`] = {
+                ok: r.ok,
+                error: r.error,
+                detail: r.detail,
+                elapsed: r.elapsed,
+              };
+            }
+            return next;
+          });
+        }
+      })
+      .catch((e) => {
+        const msg = e instanceof Error ? e.message : "Request failed";
+        setDmSessionResults((prev) => {
+          const next = { ...(prev || {}) };
+          if (data) {
+            for (const a of data.agents) {
+              for (const p of a.platforms) {
+                next[`${a.id}:${p.name}`] = { ok: false, error: msg, elapsed: 0 };
+              }
+            }
+          }
+          return next;
+        });
+      })
+      .finally(() => setTestingDmSessions(false));
+  }, [data, callTestApi]);
 
   // 定时刷新
   useEffect(() => {
@@ -549,6 +601,15 @@ export default function Home() {
               {t("home.updatedAt")} {lastUpdated}
             </span>
           )}
+          <button
+            type="button"
+            onClick={() => void testAllDmSessions()}
+            disabled={testingDmSessions || !data?.agents?.length}
+            className="shrink-0 px-3 py-2 rounded-lg bg-[var(--card)] border border-[var(--border)] text-xs hover:border-[var(--accent)] transition disabled:opacity-50"
+            title={t("home.testDmSessions")}
+          >
+            {testingDmSessions ? t("home.testingDmSessions") : t("home.testDmSessions")}
+          </button>
         </div>
       </div>
 

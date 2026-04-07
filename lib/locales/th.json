@@ -142,6 +142,7 @@
   "agent.modelSaving": "กำลังใช้...",
   "agent.modelApplyHint": "การบันทึกจะรีสตาร์ทเกตเวย์โดยอัตโนมัติเพื่อใช้โมเดลใหม่",
   "agent.modelApplyFailed": "ใช้โมเดลไม่สำเร็จ",
+  "agent.modelSavedViaFile": "บันทึกลง openclaw.json ในเครื่องแล้ว (เชื่อม Gateway ไม่ได้) โปรดเปิด Gateway และตรวจสอบการตั้งค่า",
   "agent.currentUnknownModel": "โมเดลปัจจุบัน (ไม่อยู่ในรายการตัวเลือก)",
   "agent.status.working": "กำลังทำงาน",
   "agent.status.online": "ออนไลน์",

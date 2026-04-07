@@ -22,4 +22,18 @@ if (!fs.existsSync(path.join(standalone, "server.js"))) {
 fs.mkdirSync(path.join(standalone, ".next"), { recursive: true });
 fs.cpSync(staticSrc, staticDest, { recursive: true, force: true });
 fs.cpSync(publicSrc, publicDest, { recursive: true, force: true });
+
+const scriptsDest = path.join(standalone, "scripts");
+const addPathScriptSrc = path.join(
+  root,
+  "packaging",
+  "openclaw-oneclick",
+  "scripts",
+  "add-openclaw-windows-path.ps1",
+);
+if (fs.existsSync(addPathScriptSrc)) {
+  fs.mkdirSync(scriptsDest, { recursive: true });
+  fs.copyFileSync(addPathScriptSrc, path.join(scriptsDest, "add-openclaw-windows-path.ps1"));
+}
+
 console.log("[packaging] Copied .next/static and public into .next/standalone");

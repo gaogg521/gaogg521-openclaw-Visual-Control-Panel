@@ -265,6 +265,8 @@ const translations: Record<Locale, Record<string, string>> = {
     "agent.modelSaving": "套用中...",
     "agent.modelApplyHint": "儲存後會自動重新啟動 Gateway，以套用新模型。",
     "agent.modelApplyFailed": "模型套用失敗",
+    "agent.modelSavedViaFile":
+      "已寫入本機 openclaw.json（目前無法連上 Gateway）。請啟動 Gateway 後確認執行中設定是否一致；若已啟動仍異常，可重啟 Gateway。",
     "agent.currentUnknownModel": "目前模型（不在候選列表）",
 
     // agent status
@@ -915,6 +917,8 @@ const translations: Record<Locale, Record<string, string>> = {
     "agent.modelSaving": "应用中...",
     "agent.modelApplyHint": "保存后会自动重启 Gateway，以应用新模型。",
     "agent.modelApplyFailed": "模型应用失败",
+    "agent.modelSavedViaFile":
+      "已写入本机 openclaw.json（当前无法连接网关）。请启动网关后确认运行中配置是否一致；若已启动仍异常，可重启网关。",
     "agent.currentUnknownModel": "当前模型（不在候选列表）",
 
     // agent status
@@ -1565,6 +1569,8 @@ const translations: Record<Locale, Record<string, string>> = {
     "agent.modelSaving": "Applying...",
     "agent.modelApplyHint": "Saving will restart the Gateway automatically to apply the new model.",
     "agent.modelApplyFailed": "Failed to apply model",
+    "agent.modelSavedViaFile":
+      "Saved to local openclaw.json (Gateway unreachable). Start the Gateway and verify the live config matches; restart Gateway if it still looks wrong.",
     "agent.currentUnknownModel": "Current model (not in option list)",
 
     // agent status

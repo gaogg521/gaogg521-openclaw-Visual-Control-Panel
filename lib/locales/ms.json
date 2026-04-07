@@ -142,6 +142,7 @@
   "agent.modelSaving": "Menghapuskan...",
   "agent.modelApplyHint": "Menyimpan akan memulakan semula Gateway secara automatik untuk menggunakan model baharu.",
   "agent.modelApplyFailed": "Gagal menggunakan model",
+  "agent.modelSavedViaFile": "Disimpan ke openclaw.json tempatan (Gateway tidak boleh dihubungi). Mulakan Gateway dan sahkan konfigurasi.",
   "agent.currentUnknownModel": "Model semasa (tiada dalam senarai pilihan)",
   "agent.status.working": "Bekerja",
   "agent.status.online": "Dalam talian",

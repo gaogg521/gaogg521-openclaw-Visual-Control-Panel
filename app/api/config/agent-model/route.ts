@@ -3,9 +3,9 @@ import fs from "fs";
 import path from "path";
 import { clearConfigCache } from "@/lib/config-cache";
 import { callOpenclawGateway, resolveConfigSnapshotHash } from "@/lib/openclaw-cli";
-import { OPENCLAW_AGENTS_DIR } from "@/lib/openclaw-paths";
 import { syncOpenclawToMysql } from "@/lib/db-sync";
 import { enforceLocalRequest } from "@/lib/api-local-guard";
+import { detectAndFixOpenclawHome, getResolvedConfigPath, getResolvedOpenclawHome } from "@/lib/openclaw-home-detect";
 
 const GATEWAY_CALL_TIMEOUT_MS = 15000;
 const GATEWAY_RECOVERY_TIMEOUT_MS = 45000;
@@ -62,6 +62,34 @@ function statusForError(message: string): number {
     return 503;
   }
   return 500;
+}
+
+/** 判断是否为「连不上 Gateway」类错误，可降级为直接写 openclaw.json */
+function isLikelyGatewayUnreachable(err: unknown): boolean {
+  const msg = normalizeErrorMessage(err).toLowerCase();
+  return (
+    msg.includes("gateway closed") ||
+    msg.includes("gateway call failed") ||
+    msg.includes("abnormal closure") ||
+    msg.includes("normal closure") ||
+    msg.includes("econnrefused") ||
+    msg.includes("econnreset") ||
+    msg.includes("etimedout") ||
+    msg.includes("timeout") ||
+    msg.includes("not running") ||
+    msg.includes("connect failed") ||
+    msg.includes("websocket") ||
+    msg.includes("failed to connect") ||
+    msg.includes("socket hang up") ||
+    msg.includes("network error")
+  );
+}
+
+function writeOpenclawJsonAtomic(configPath: string, config: unknown): void {
+  const payload = `${JSON.stringify(config, null, 2)}\n`;
+  const tmpPath = `${configPath}.tmp.${process.pid}`;
+  fs.writeFileSync(tmpPath, payload, "utf8");
+  fs.renameSync(tmpPath, configPath);
 }
 
 function findAgentConfigEntry(config: any, agentId: string): Record<string, any> | null {
@@ -148,7 +176,8 @@ async function waitForPatchedModel(agentId: string, model: string): Promise<void
 }
 
 function clearAgentSessionModelState(agentId: string): void {
-  const sessionsPath = path.join(OPENCLAW_AGENTS_DIR, agentId, "sessions", "sessions.json");
+  const home = getResolvedOpenclawHome();
+  const sessionsPath = path.join(home, "agents", agentId, "sessions", "sessions.json");
   if (!fs.existsSync(sessionsPath)) return;
 
   const raw = fs.readFileSync(sessionsPath, "utf8");
@@ -185,14 +214,36 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ ok: false, error: "Missing agentId or model" }, { status: 400 });
     }
 
-    const snapshot = await getConfigSnapshot();
-    if (snapshot?.valid === false || !isPlainObject(snapshot?.config)) {
-      return NextResponse.json({ ok: false, error: "Gateway config is invalid or unavailable" }, { status: 400 });
+    let snapshot: ConfigSnapshot;
+    let appliedViaFile = false;
+
+    try {
+      snapshot = await getConfigSnapshot();
+    } catch (gwErr) {
+      if (!isLikelyGatewayUnreachable(gwErr)) {
+        const error = normalizeErrorMessage(gwErr);
+        return NextResponse.json({ ok: false, error }, { status: statusForError(error) });
+      }
+      try {
+        detectAndFixOpenclawHome();
+        const configPath = getResolvedConfigPath();
+        const raw = fs.readFileSync(configPath, "utf8");
+        const diskConfig = JSON.parse(raw);
+        if (!isPlainObject(diskConfig)) {
+          throw new Error("openclaw.json is not a JSON object");
+        }
+        snapshot = { valid: true, config: diskConfig, raw };
+        appliedViaFile = true;
+      } catch (fileErr) {
+        const gw = normalizeErrorMessage(gwErr);
+        const fe = normalizeErrorMessage(fileErr);
+        const error = `网关不可用（${gw}），且无法读取本地配置（${fe}）。请先启动 OpenClaw 网关后再试，或检查 openclaw.json 是否可读。`;
+        return NextResponse.json({ ok: false, error }, { status: 503 });
+      }
     }
 
-    const baseHash = resolveConfigSnapshotHash(snapshot);
-    if (!baseHash) {
-      return NextResponse.json({ ok: false, error: "Missing baseHash from config snapshot" }, { status: 500 });
+    if (snapshot?.valid === false || !isPlainObject(snapshot?.config)) {
+      return NextResponse.json({ ok: false, error: "Gateway config is invalid or unavailable" }, { status: 400 });
     }
 
     const config = snapshot.config;
@@ -204,6 +255,30 @@ export async function PATCH(request: Request) {
     const knownModels = collectKnownModels(config);
     if (!knownModels.has(model)) {
       return NextResponse.json({ ok: false, error: `Unknown model: ${model}` }, { status: 400 });
+    }
+
+    if (appliedViaFile) {
+      agentEntry.model = model;
+      detectAndFixOpenclawHome();
+      writeOpenclawJsonAtomic(getResolvedConfigPath(), config);
+      clearConfigCache();
+      clearAgentSessionModelState(agentId);
+      clearConfigCache();
+      await syncOpenclawToMysql("api:config-agent-model");
+
+      return NextResponse.json({
+        ok: true,
+        agentId,
+        model,
+        applied: true,
+        resetSessions: true,
+        appliedViaFile: true,
+      });
+    }
+
+    const baseHash = resolveConfigSnapshotHash(snapshot);
+    if (!baseHash) {
+      return NextResponse.json({ ok: false, error: "Missing baseHash from config snapshot" }, { status: 500 });
     }
 
     const patch = {

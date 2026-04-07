@@ -142,6 +142,7 @@
   "agent.modelSaving": "Menerapkan...",
   "agent.modelApplyHint": "Menyimpan akan memulai ulang Gateway secara otomatis untuk menerapkan model baru.",
   "agent.modelApplyFailed": "Gagal menerapkan model",
+  "agent.modelSavedViaFile": "Disimpan ke openclaw.json lokal (Gateway tidak terjangkau). Mulai Gateway dan verifikasi konfigurasi.",
   "agent.currentUnknownModel": "Model saat ini (tidak ada dalam daftar opsi)",
   "agent.status.working": "Bekerja",
   "agent.status.online": "Online",
