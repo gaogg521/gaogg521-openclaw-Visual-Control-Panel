@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { resolveAgentSessionsDir } from "@/lib/agent-runtime-paths";
+import { coerceToActivityMs } from "@/lib/feishu-group-activity-boost";
 
 /**
  * 与 /api/agent-status 一致：合并 sessions.json 的 updatedAt 与近期 jsonl 中的消息时间，
@@ -16,7 +17,7 @@ export function getAgentLastActivityMs(agentId: string): number | null {
     const raw = fs.readFileSync(sessionsPath, "utf-8");
     const sessions = JSON.parse(raw);
     for (const val of Object.values(sessions)) {
-      const ts = (val as { updatedAt?: number }).updatedAt || 0;
+      const ts = coerceToActivityMs((val as { updatedAt?: unknown }).updatedAt);
       if (ts > (lastActive || 0)) lastActive = ts;
     }
   } catch {

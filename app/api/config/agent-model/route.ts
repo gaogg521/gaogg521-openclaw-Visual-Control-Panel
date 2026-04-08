@@ -6,6 +6,7 @@ import { callOpenclawGateway, resolveConfigSnapshotHash } from "@/lib/openclaw-c
 import { syncOpenclawToMysql } from "@/lib/db-sync";
 import { enforceLocalRequest } from "@/lib/api-local-guard";
 import { detectAndFixOpenclawHome, getResolvedConfigPath, getResolvedOpenclawHome } from "@/lib/openclaw-home-detect";
+import { parseOpenclawConfigText } from "@/lib/openclaw-config-read";
 
 const GATEWAY_CALL_TIMEOUT_MS = 15000;
 const GATEWAY_RECOVERY_TIMEOUT_MS = 45000;
@@ -228,7 +229,7 @@ export async function PATCH(request: Request) {
         detectAndFixOpenclawHome();
         const configPath = getResolvedConfigPath();
         const raw = fs.readFileSync(configPath, "utf8");
-        const diskConfig = JSON.parse(raw);
+        const diskConfig = parseOpenclawConfigText(raw);
         if (!isPlainObject(diskConfig)) {
           throw new Error("openclaw.json is not a JSON object");
         }

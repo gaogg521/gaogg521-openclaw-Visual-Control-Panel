@@ -52,6 +52,14 @@ Recent UX work includes **six UI languages** (with SEA packs in `lib/locales/`),
 
 Polling and OpenClaw CLI usage were tightened so a slow `/api/agent-activity` or `/api/gateway-health` does **not** spawn **hundreds of `node` processes**: **serial client polling**, **single-flight** request coalescing on the server, **sequential** gateway RPCs (no parallel `openclaw` bursts), **`AbortController`** where early timeouts apply, and **`npm run dev` checks port 3003** via `scripts/check-dev-port.mjs` before starting Next. **Restart OneOneClaw** on `/oneone-dashboard` uses **streaming stdout/stderr** (terminal-like). Technical changelog: **[docs/RECENT_OPTIMIZATIONS_2026-03-27.zh-CN.md](docs/RECENT_OPTIMIZATIONS_2026-03-27.zh-CN.md)** (Chinese).
 
+### Changelog highlights (2026-04-07)
+
+- **Windows install & PATH** — New script **`packaging/openclaw-oneclick/scripts/add-openclaw-windows-path.ps1`** appends the portable Node tree under **`%LOCALAPPDATA%\ONEClaw\node-portable\`** (latest `node-v*-win-x64` by semver), **`node_modules\npm\bin`**, and **`%LOCALAPPDATA%\npm`** to the **current user** `Path` after install. **`ensure-node22-portable.ps1`** only adjusts the **current process** `PATH`; persistence runs at the end of **`install-openclaw-windows.ps1`** and after success in **`app/api/setup/oneclick-install`**. Packaged builds copy the helper into **`.next/standalone/scripts/`** via **`scripts/copy-standalone-assets.mjs`** (run **`npm run build`** before **`npm run electron:dist`**).
+
+- **`openclaw.json` parsing** — **`lib/openclaw-config-read.ts`** + **`json5`**: try **`JSON.parse`**, then **`JSON5.parse`**, so newer upstream templates with comments/trailing commas/unquoted keys still load in the dashboard. Writes remain strict JSON via Gateway / `JSON.stringify`.
+
+- **Dev / Turbopack** — Module docs use **`//` line comments** so block comments never contain a stray **`*/`** sequence.
+
 ### Languages, themes, pixel worlds & live data
 
 - **Internationalization** — Sidebar language selector: **简体中文**, **繁體中文**, **English**, **Bahasa Melayu**, **Bahasa Indonesia**, **ไทย**. Large zh / zh-TW / en tables live in `lib/i18n.tsx`; **ms / id / th** ship as `lib/locales/ms.json`, `id.json`, `th.json`. Missing keys **fall back** to English, then Simplified Chinese. Maintainers can run **`npm run i18n:merge-sea`** to merge SEA locale chunk files.
@@ -393,7 +401,7 @@ Install, ports, and restart commands are in **[Installation](#install-guide)** a
 
 ## Configuration
 
-By default, the dashboard reads config from `~/.openclaw/openclaw.json`. That file must be **strict JSON** (OpenClaw uses `JSON.parse`): **no** `//` or `/* */` comments and **no** trailing commas. The dashboard’s save path uses `JSON.stringify` and never injects comments.
+By default, the dashboard reads config from `~/.openclaw/openclaw.json`. **On read**, the app tries **strict `JSON.parse`** first, then **JSON5** (comments, trailing commas, etc.; see **Changelog highlights (2026-04-07)**). **OpenClaw CLI / Gateway** may still require strict JSON on disk. The dashboard’s save path uses `JSON.stringify` and never injects comments.
 
 To use a custom path:
 

@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { getConfigCache, setConfigCache } from "@/lib/config-cache";
 import { OPENCLAW_CONFIG_PATH, OPENCLAW_HOME } from "@/lib/openclaw-paths";
+import { parseOpenclawConfigText } from "@/lib/openclaw-config-read";
 import { detectAndFixOpenclawHome, getResolvedConfigPath } from "@/lib/openclaw-home-detect";
 import { isTrustedConfigHost } from "@/lib/api-local-guard";
 
@@ -295,7 +296,7 @@ export async function GET(req: Request) {
 
   let config: any;
   try {
-    config = JSON.parse(raw);
+    config = parseOpenclawConfigText(raw);
   } catch (parseErr: any) {
     return NextResponse.json(
       {

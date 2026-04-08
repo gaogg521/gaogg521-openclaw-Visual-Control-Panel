@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { readOpenclawConfigObjectSync } from "@/lib/openclaw-config-read";
 import { getOpenclawPackageCandidates, OPENCLAW_CONFIG_PATH, OPENCLAW_HOME } from "@/lib/openclaw-paths";
 
 export interface SkillInfo {
@@ -244,7 +245,7 @@ export function listOpenclawSkills(options?: { includeScanPaths?: boolean }): {
     }
   }
 
-  const config = JSON.parse(fs.readFileSync(OPENCLAW_CONFIG_PATH, "utf-8"));
+  const config = readOpenclawConfigObjectSync(OPENCLAW_CONFIG_PATH) as Record<string, any>;
   const agentList = config.agents?.list || [];
   const agents: Record<string, SkillAgentInfo> = {};
   for (const agent of agentList) {

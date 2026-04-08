@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { exec, execFile } from "child_process";
 import { promisify } from "util";
-import { readJsonFileSync } from "@/lib/json";
+import { readOpenclawConfigObjectSync } from "@/lib/openclaw-config-read";
 import { OPENCLAW_CONFIG_PATH } from "@/lib/openclaw-paths";
 
 const CONFIG_PATH = OPENCLAW_CONFIG_PATH;
@@ -127,7 +127,7 @@ async function computeGatewayHealthPayload(): Promise<Record<string, unknown>> {
   const startedAt = Date.now();
   try {
     const openclawVersion = await getOpenclawVersion();
-    const config = readJsonFileSync<any>(CONFIG_PATH);
+    const config = readOpenclawConfigObjectSync(CONFIG_PATH) as Record<string, any>;
     const port = config.gateway?.port || 18789;
     const token = config.gateway?.auth?.token || "";
     const webUrl = `http://localhost:${port}/chat${token ? '?token=' + encodeURIComponent(token) : ''}`;
@@ -205,7 +205,7 @@ async function computeGatewayHealthPayload(): Promise<Record<string, unknown>> {
         : err.message;
     const token = (() => {
       try {
-        const cfg = readJsonFileSync<any>(CONFIG_PATH);
+        const cfg = readOpenclawConfigObjectSync(CONFIG_PATH) as Record<string, any>;
         return cfg.gateway?.auth?.token || "";
       } catch {
         return "";
@@ -213,7 +213,7 @@ async function computeGatewayHealthPayload(): Promise<Record<string, unknown>> {
     })();
     const port = (() => {
       try {
-        const cfg = readJsonFileSync<any>(CONFIG_PATH);
+        const cfg = readOpenclawConfigObjectSync(CONFIG_PATH) as Record<string, any>;
         return cfg.gateway?.port || 18789;
       } catch {
         return 18789;

@@ -9,6 +9,7 @@ import {
 } from "@/lib/session-test-fallback";
 import { enforceLocalRequest } from "@/lib/api-local-guard";
 import { detectAndFixOpenclawHome, getResolvedConfigPath, getResolvedOpenclawHome } from "@/lib/openclaw-home-detect";
+import { parseOpenclawConfigText } from "@/lib/openclaw-config-read";
 
 /** 单次网关 HTTP 探测上限，避免多专家×多通道串行时浏览器先断开（Failed to fetch） */
 const HTTP_PROBE_MS = 22_000;
@@ -224,7 +225,7 @@ export async function POST(req: Request) {
     detectAndFixOpenclawHome();
     const configPath = getResolvedConfigPath();
     const raw = fs.readFileSync(configPath, "utf-8");
-    const config = JSON.parse(raw);
+    const config = parseOpenclawConfigText(raw) as Record<string, any>;
     const gatewayPort = config.gateway?.port || 18789;
     const gatewayToken = config.gateway?.auth?.token || "";
     const channels = config.channels || {};

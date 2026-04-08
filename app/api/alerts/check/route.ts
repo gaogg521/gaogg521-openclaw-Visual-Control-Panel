@@ -9,6 +9,7 @@ import {
   probeModel,
 } from "@/lib/model-probe";
 import { OPENCLAW_CONFIG_PATH, OPENCLAW_HOME } from "@/lib/openclaw-paths";
+import { parseOpenclawConfigText } from "@/lib/openclaw-config-read";
 import { enforceLocalRequest } from "@/lib/api-local-guard";
 import { reconcileIncidents, summarizeIncidents, type AlertIncident, type AlertSeverity } from "@/lib/alert-incidents";
 const ALERTS_CONFIG_PATH = path.join(OPENCLAW_HOME, "alerts.json");
@@ -58,11 +59,11 @@ function getAlertConfig(): AlertConfig {
   ], lastAlerts: {}, incidents: [] };
 }
 
-function getOpenclawConfig() {
+function getOpenclawConfig(): Record<string, any> {
   const configPath = OPENCLAW_CONFIG_PATH;
   try {
     const raw = fs.readFileSync(configPath, "utf-8");
-    return JSON.parse(raw);
+    return parseOpenclawConfigText(raw) as Record<string, any>;
   } catch {
     return {};
   }
@@ -89,7 +90,7 @@ function getGatewayConfig() {
   const configPath = OPENCLAW_CONFIG_PATH;
   try {
     const raw = fs.readFileSync(configPath, "utf-8");
-    const config = JSON.parse(raw);
+    const config = parseOpenclawConfigText(raw) as Record<string, any>;
     return {
       port: config.gateway?.port || 18789,
       token: config.gateway?.auth?.token || "",

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { detectAndFixOpenclawHome, getResolvedConfigPath, getResolvedOpenclawHome } from "@/lib/openclaw-home-detect";
+import { parseOpenclawConfigText } from "@/lib/openclaw-config-read";
 import { execOpenclaw, parseOpenclawJsonOutput, stripOpenclawCliLogNoise } from "@/lib/openclaw-cli";
 
 type ChatRole = "system" | "user" | "assistant";
@@ -13,7 +14,7 @@ interface ChatMessage {
 
 function readGatewayConfig(): { host: string; port: number; token: string } {
   const raw = fs.readFileSync(getResolvedConfigPath(), "utf-8");
-  const config = JSON.parse(raw);
+  const config = parseOpenclawConfigText(raw) as Record<string, any>;
   const hostRaw = String(config?.gateway?.host || config?.gateway?.hostname || "127.0.0.1");
   const host = hostRaw === "localhost" ? "127.0.0.1" : hostRaw;
   const port = Number(config?.gateway?.port || 18789);

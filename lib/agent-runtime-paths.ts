@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { parseOpenclawConfigText } from "@/lib/openclaw-config-read";
 import { OPENCLAW_AGENTS_DIR, OPENCLAW_CONFIG_PATH, OPENCLAW_HOME } from "@/lib/openclaw-paths";
 
 type ConfigAgent = {
@@ -25,7 +26,7 @@ function readConfigAgents(): RuntimeAgentInfo[] {
   try {
     if (!fs.existsSync(OPENCLAW_CONFIG_PATH)) return [];
     const raw = fs.readFileSync(OPENCLAW_CONFIG_PATH, "utf-8");
-    const parsed = JSON.parse(raw);
+    const parsed = parseOpenclawConfigText(raw) as Record<string, any>;
     const list: ConfigAgent[] = Array.isArray(parsed?.agents?.list) ? parsed.agents.list : [];
     return list
       .filter((x) => x && typeof x.id === "string" && x.id.trim())

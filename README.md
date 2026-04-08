@@ -87,6 +87,20 @@
 
 针对 **`/api/agent-activity`、`/api/gateway-health`** 等慢接口，已避免 **短时间叠出大量并发请求与 `openclaw` 子进程**（任务管理器里曾出现数百个 Node）：前端 **串行轮询**、服务端 **single-flight 合并**、Gateway 活动 **串行 RPC**、关键路径 **`AbortController`**，以及 **`npm run dev` 前检测 3003 端口**（`scripts/check-dev-port.mjs`）。**OneOne 仪表盘「重启 OneOneClaw」** 已改为 **流式输出**（接近 CMD 观感）。完整说明见 **[docs/RECENT_OPTIMIZATIONS_2026-03-27.zh-CN.md](docs/RECENT_OPTIMIZATIONS_2026-03-27.zh-CN.md)**。
 
+### 更新摘要（2026-04-07）
+
+- **Windows 安装与 PATH**  
+  - 新增 **`packaging/openclaw-oneclick/scripts/add-openclaw-windows-path.ps1`**：在便携 Node 与 `npm` 全局目录就绪后，把 **`%LOCALAPPDATA%\ONEClaw\node-portable\…`**（取语义化版本最新的 `node-v*-win-x64`）、其下的 **`node_modules\npm\bin`**、以及 **`%LOCALAPPDATA%\npm`** 追加到 **当前用户** 的 `Path`（去重），并广播环境变更。  
+  - **`ensure-node22-portable.ps1`** 仅负责 **当前 PowerShell 进程** 内的 PATH；持久化由上述脚本在安装流程末尾执行。  
+  - **`install-openclaw-windows.ps1`** 在官方 `install.ps1` 结束后调用该脚本；**`app/api/setup/oneclick-install`** 在 Windows 安装成功后也会 **`powershell -File`** 调用（打包环境依赖 **`npm run build`** 时由 **`scripts/copy-standalone-assets.mjs`** 将脚本复制到 **`.next/standalone/scripts/`**）。  
+
+- **`openclaw.json` 读取兼容新版模板**  
+  - 新增 **`lib/openclaw-config-read.ts`**，依赖 **`json5`**：**先 `JSON.parse`，失败再 `JSON5.parse`**，以兼容官方升级后配置里可能出现的 **注释、尾随逗号、无引号键名** 等（仪表盘 **`/api/config`** 及所有读配置的 API 已统一走此逻辑）。  
+  - **写入** 仍通过 Gateway / `JSON.stringify` 输出标准 JSON；若 OpenClaw **运行时** 仍要求磁盘文件为严格 JSON，可用官方工具自行规范化。  
+
+- **开发构建**  
+  - 该模块顶部说明使用 **`//` 单行注释**，避免块注释内误写 **`*/`** 导致 **Turbopack** 解析失败。  
+
 ### 语言、风格、像素场景与实时配置
 
 - **国际化（远不止中英文切换）** — 侧栏语言下拉 **六种**：**简体中文、繁體中文、English、Bahasa Melayu、Bahasa Indonesia、ไทย**。简/繁/英主体文案在 **`lib/i18n.tsx`**；**马来语、印尼语、泰语** 使用独立文件 **`lib/locales/ms.json`、`id.json`、`th.json`**。缺键时按 **英文 → 简体中文** 回退。维护东南亚文案分包可运行 **`npm run i18n:merge-sea`** 合并分块。
@@ -428,7 +442,7 @@ npm run electron:dist:skip-next
 
 ## 自定义配置路径
 
-默认读取 `~/.openclaw/openclaw.json`。该文件须为 **标准 JSON**（OpenClaw 用 `JSON.parse`）：**不能**写 `//`、`/* */` 注释，**不能**有尾随逗号；仪表盘经 Gateway 写入时使用 `JSON.stringify`，**不会**往文件里加注释。
+默认读取 `~/.openclaw/openclaw.json`。**本仪表盘读取**时：先按 **标准 `JSON.parse`**，失败再按 **JSON5** 解析（可兼容部分注释、尾随逗号等，见上文 **「更新摘要（2026-04-07）」**）。**OpenClaw CLI / 网关** 仍可能要求磁盘上为严格 JSON；经 Gateway 或面板写入时使用 `JSON.stringify`，**不会**主动往文件里加注释。
 
 若要指定其他目录：
 

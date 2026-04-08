@@ -3,6 +3,7 @@ import path from "path";
 import { exec, execFile } from "child_process";
 import { promisify } from "util";
 import { readJsonFileSync } from "@/lib/json";
+import { readOpenclawConfigObjectSync } from "@/lib/openclaw-config-read";
 import { OPENCLAW_CONFIG_PATH, OPENCLAW_HOME } from "@/lib/openclaw-paths";
 import { getProbePresetById, mapProbeProtocolToApi } from "@/lib/model-probe-presets";
 
@@ -189,7 +190,7 @@ function mergeModelsJsonLayers(providerId: string, agentId?: string): ProviderCo
 function readProviderFromOpenclawJson(providerId: string): ProviderConfig | null {
   try {
     if (!fs.existsSync(OPENCLAW_CONFIG_PATH)) return null;
-    const cfg = readJsonFileSync<any>(OPENCLAW_CONFIG_PATH);
+    const cfg = readOpenclawConfigObjectSync(OPENCLAW_CONFIG_PATH) as Record<string, any>;
     return pickProviderFromMap(cfg?.models?.providers, providerId);
   } catch {
     return null;

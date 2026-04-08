@@ -245,7 +245,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "home.notInstalledCta": "前往安裝向導",
     "home.notInstalledRetry": "已安裝，重新檢測",
     "home.notInstalledDiag": "診斷詳情（技術資訊）",
-    "home.configParseErrorHint": "openclaw.json 格式有誤。ONE CLAW 要求標準 JSON：不可含 // 或 /* */ 註解，不可有尾隨逗號；請修正後再重新整理。",
+    "home.configParseErrorHint": "openclaw.json 無法解析。儀表板會先嘗試標準 JSON，再嘗試相容註解與尾隨逗號（JSON5）；若仍失敗請檢查該行語法或鍵名是否加雙引號，修正後重新整理。",
 
     // agent card
     "agent.model": "模型",
@@ -897,7 +897,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "home.notInstalledCta": "前往安装向导",
     "home.notInstalledRetry": "已安装，重新检测",
     "home.notInstalledDiag": "诊断详情（技术信息）",
-    "home.configParseErrorHint": "openclaw.json 格式有误。ONE CLAW 要求标准 JSON：不能含 // 或 /* */ 注释，不能有尾随逗号；请修正后刷新页面。",
+    "home.configParseErrorHint": "openclaw.json 无法解析。仪表盘会先尝试标准 JSON，再尝试兼容注释与尾随逗号（JSON5）；若仍失败请检查该行语法或键名是否加双引号，修正后刷新页面。",
 
     // agent card
     "agent.model": "模型",
@@ -1549,7 +1549,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "home.notInstalledCta": "Go to Setup Wizard",
     "home.notInstalledRetry": "Installed — Retry Detection",
     "home.notInstalledDiag": "Diagnostic details (technical info)",
-    "home.configParseErrorHint": "openclaw.json is invalid. ONE CLAW expects strict JSON: no // or /* */ comments and no trailing commas. Fix the file and refresh.",
+    "home.configParseErrorHint": "openclaw.json could not be parsed. The dashboard tries strict JSON first, then JSON5 (comments/trailing commas). If it still fails, fix the reported line and refresh.",
 
     // agent card
     "agent.model": "Model",

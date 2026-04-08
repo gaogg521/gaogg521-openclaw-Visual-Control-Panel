@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { promises as fs, existsSync } from 'fs'
 import path from 'path'
-import { parseJsonText } from '@/lib/json'
+import { parseOpenclawConfigText } from '@/lib/openclaw-config-read'
 import { formatAgentDisplayName } from '@/lib/pixel-office/agentDisplayName'
 import { OPENCLAW_AGENTS_DIR, OPENCLAW_CONFIG_PATH, OPENCLAW_HOME } from '@/lib/openclaw-paths'
 import { listRuntimeAgents, resolveAgentSessionsDir } from '@/lib/agent-runtime-paths'
@@ -10,6 +10,13 @@ import {
   getAgentSessionsDirMaxMtimeMs,
 } from '@/lib/agent-session-activity'
 import { fetchGatewayAgentActivityMap } from '@/lib/gateway-agent-activity-hint'
+import {
+  aggregateFeishuGroupActivityMsByGroup,
+  aggregateFeishuSessionOwnerActivityMs,
+  collectFeishuGroupIdsForAgent,
+  maxAllFeishuGroupActivity,
+  maxFeishuGroupActivityForAgent,
+} from '@/lib/feishu-group-activity-boost'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -810,11 +817,17 @@ async function computeAgentActivityPayload(): Promise<{ agents: AgentActivity[] 
   try {
     if (existsSync(configPath)) {
       const configContent = await fs.readFile(configPath, 'utf8')
-      const config = parseJsonText(configContent)
+      const config = parseOpenclawConfigText(configContent)
 
       const agentList = await loadAgentList(config, agentsDir)
       if (agentList.length > 0) {
         const now = Date.now()
+        const cfg = config as Record<string, unknown>
+        const bindings = Array.isArray(cfg.bindings) ? cfg.bindings : []
+        const agentIds = agentList.map((a) => a.id)
+        const feishuGroupActivity = aggregateFeishuGroupActivityMsByGroup(agentIds)
+        const feishuOwnerActivity = aggregateFeishuSessionOwnerActivityMs(agentIds)
+        const globalFeishuMax = maxAllFeishuGroupActivity(feishuGroupActivity)
         const liveCronJobs = await loadCronJobs(config)
         const gwAbort = new AbortController()
         const gatewayActivity = await Promise.race([
@@ -843,6 +856,18 @@ async function computeAgentActivityPayload(): Promise<{ agents: AgentActivity[] 
             const fromDirFiles = getAgentSessionsDirMaxMtimeMs(agent.id)
             localLastActive = Math.max(fromSessions, fromDirFiles)
           }
+          // 飞书群消息常落在总指挥等单一 Agent 的 sessions 下；按 bindings / agents.list 上的群 ID 把活跃度合并到对应专家
+          const boundGroupIds = collectFeishuGroupIdsForAgent(
+            agent.id,
+            agent as unknown as Record<string, unknown>,
+            bindings,
+          )
+          let feishuGroupBoost = maxFeishuGroupActivityForAgent(feishuGroupActivity, boundGroupIds)
+          if (boundGroupIds.length === 0) {
+            feishuGroupBoost = Math.max(feishuGroupBoost, globalFeishuMax)
+          }
+          const feishuOwnerBoost = feishuOwnerActivity.get(agent.id) || 0
+          localLastActive = Math.max(localLastActive, feishuGroupBoost, feishuOwnerBoost)
           const gwActive = gatewayActivity.get(agent.id) || 0
           lastActive = Math.max(localLastActive, gwActive)
 

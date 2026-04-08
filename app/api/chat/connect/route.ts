@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { getResolvedConfigPath, getResolvedOpenclawHome } from "@/lib/openclaw-home-detect";
+import { parseOpenclawConfigText } from "@/lib/openclaw-config-read";
 import { enforceLocalRequest } from "@/lib/api-local-guard";
 
 function parseSessions(agentId: string) {
@@ -32,7 +33,7 @@ export async function POST(req: Request) {
     }
 
     const cfgRaw = fs.readFileSync(getResolvedConfigPath(), "utf-8");
-    const cfg = JSON.parse(cfgRaw);
+    const cfg = parseOpenclawConfigText(cfgRaw) as Record<string, any>;
     const token = String(cfg?.gateway?.auth?.token || "");
     const authMode = String(cfg?.gateway?.auth?.mode || "");
     const sessions = parseSessions(agentId);

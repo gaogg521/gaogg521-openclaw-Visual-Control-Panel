@@ -3,6 +3,7 @@ import path from "path";
 import crypto from "crypto";
 import { getMysqlPool } from "@/lib/mysql";
 import { OPENCLAW_AGENTS_DIR, OPENCLAW_CONFIG_PATH } from "@/lib/openclaw-paths";
+import { parseOpenclawConfigText } from "@/lib/openclaw-config-read";
 
 type SyncSummary = {
   configHash: string;
@@ -76,7 +77,7 @@ function parseSessionMeta(sessionKey: string): { channel: string | null; chatTyp
 
 function readConfig(): { raw: string; config: any } {
   const raw = fs.readFileSync(OPENCLAW_CONFIG_PATH, "utf-8");
-  return { raw, config: JSON.parse(raw) };
+  return { raw, config: parseOpenclawConfigText(raw) };
 }
 
 function buildAgents(config: any): Array<{ id: string; name: string; model: string; emoji: string | null; workspace: string | null; raw: any }> {

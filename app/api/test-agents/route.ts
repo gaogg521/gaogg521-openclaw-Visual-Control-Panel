@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { DEFAULT_MODEL_PROBE_TIMEOUT_MS, parseModelRef, probeModel } from "@/lib/model-probe";
 import { OPENCLAW_CONFIG_PATH, OPENCLAW_HOME } from "@/lib/openclaw-paths";
+import { parseOpenclawConfigText } from "@/lib/openclaw-config-read";
 import { enforceLocalRequest } from "@/lib/api-local-guard";
 
 const CONFIG_PATH = OPENCLAW_CONFIG_PATH;
@@ -34,7 +35,7 @@ export async function POST(req: Request) {
   if (guard) return guard;
   try {
     const raw = fs.readFileSync(CONFIG_PATH, "utf-8");
-    const config = JSON.parse(raw);
+    const config = parseOpenclawConfigText(raw) as Record<string, any>;
     const defaults = config?.agents?.defaults || {};
     const defaultModel = typeof defaults.model === "string"
       ? defaults.model

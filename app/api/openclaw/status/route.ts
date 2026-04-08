@@ -1,18 +1,11 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
 import path from "path";
 import { OPENCLAW_CONFIG_PATH, OPENCLAW_HOME } from "@/lib/openclaw-paths";
-import { readJsonFileSync } from "@/lib/json";
+import { readOpenclawConfigObjectSync } from "@/lib/openclaw-config-read";
 import { execOpenclaw } from "@/lib/openclaw-cli";
 
 function loadConfig(): Record<string, any> {
-  try {
-    const raw = fs.readFileSync(OPENCLAW_CONFIG_PATH, "utf-8");
-    const data = JSON.parse(raw);
-    return typeof data === "object" && data !== null ? data : {};
-  } catch {
-    return {};
-  }
+  return readOpenclawConfigObjectSync(OPENCLAW_CONFIG_PATH) as Record<string, any>;
 }
 
 function normalizeModels(cfg: Record<string, any>): { id: string; name: string }[] {

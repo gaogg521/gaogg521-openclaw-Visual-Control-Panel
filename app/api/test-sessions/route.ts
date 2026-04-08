@@ -4,6 +4,7 @@ import path from "path";
 import { parseApiJsonSafely, shouldFallbackToCli, shouldFallbackToCliFromFetchError, testSessionViaCli } from "@/lib/session-test-fallback";
 import { enforceLocalRequest } from "@/lib/api-local-guard";
 import { detectAndFixOpenclawHome, getResolvedConfigPath, getResolvedOpenclawHome } from "@/lib/openclaw-home-detect";
+import { parseOpenclawConfigText } from "@/lib/openclaw-config-read";
 
 function hasEmbeddedHttpError(reply: string): boolean {
   // Some providers return error text in content while gateway still returns HTTP 200.
@@ -16,7 +17,7 @@ export async function POST(req: Request) {
   try {
     detectAndFixOpenclawHome();
     const raw = fs.readFileSync(getResolvedConfigPath(), "utf-8");
-    const config = JSON.parse(raw);
+    const config = parseOpenclawConfigText(raw) as Record<string, any>;
     const gatewayPort = config.gateway?.port || 18789;
     const gatewayToken = config.gateway?.auth?.token || "";
 

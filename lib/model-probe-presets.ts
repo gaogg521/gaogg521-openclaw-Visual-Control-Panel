@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { readJsonFileSync } from "@/lib/json";
+import { readOpenclawConfigObjectSync } from "@/lib/openclaw-config-read";
 import { OPENCLAW_CONFIG_PATH, OPENCLAW_HOME } from "@/lib/openclaw-paths";
 
 /** 与内网调试台「协议」选项对应，写入 JSON 时用这些值 */
@@ -82,7 +83,7 @@ export function loadProbePresetsMap(): Map<string, RawProbePreset> {
 
   try {
     if (fs.existsSync(OPENCLAW_CONFIG_PATH)) {
-      const cfg = readJsonFileSync<any>(OPENCLAW_CONFIG_PATH);
+      const cfg = readOpenclawConfigObjectSync(OPENCLAW_CONFIG_PATH) as Record<string, any>;
       if (cfg?.modelProbePresets) mergePresetsFromObject(cfg.modelProbePresets, map);
       if (cfg?.models?.probePresets) mergePresetsFromObject(cfg.models.probePresets, map);
       if (cfg?.models?.modelProbePresets) mergePresetsFromObject(cfg.models.modelProbePresets, map);

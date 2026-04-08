@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { OPENCLAW_CONFIG_PATH, OPENCLAW_HOME } from "@/lib/openclaw-paths";
+import { parseOpenclawConfigText } from "@/lib/openclaw-config-read";
 import { parseApiJsonSafely, shouldFallbackToCli, testSessionViaCli } from "@/lib/session-test-fallback";
 import { enforceLocalRequest } from "@/lib/api-local-guard";
 const CONFIG_PATH = OPENCLAW_CONFIG_PATH;
@@ -17,7 +18,7 @@ export async function POST(req: Request) {
 
     // Read gateway config
     const raw = fs.readFileSync(CONFIG_PATH, "utf-8");
-    const config = JSON.parse(raw);
+    const config = parseOpenclawConfigText(raw) as Record<string, any>;
     const gatewayPort = config.gateway?.port || 18789;
     const gatewayToken = config.gateway?.auth?.token || "";
 

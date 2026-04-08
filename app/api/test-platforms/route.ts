@@ -4,6 +4,7 @@ import path from "path";
 import { execFileSync } from "child_process";
 import { pathToFileURL } from "url";
 import { OPENCLAW_CONFIG_PATH, OPENCLAW_HOME } from "@/lib/openclaw-paths";
+import { parseOpenclawConfigText } from "@/lib/openclaw-config-read";
 const CONFIG_PATH = OPENCLAW_CONFIG_PATH;
 const QQBOT_TOKEN_URL = "https://bots.qq.com/app/getAppAccessToken";
 const QQBOT_API_BASE = "https://api.sgroup.qq.com";
@@ -1091,7 +1092,7 @@ export async function POST(req: Request) {
   }
   try {
     const raw = fs.readFileSync(CONFIG_PATH, "utf-8");
-    const config = JSON.parse(raw);
+    const config = parseOpenclawConfigText(raw) as Record<string, any>;
 
     const bindings = config.bindings || [];
     const channels = config.channels || {};

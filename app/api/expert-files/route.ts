@@ -2,7 +2,8 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import { NextResponse } from "next/server";
-import { OPENCLAW_HOME } from "@/lib/openclaw-paths";
+import { OPENCLAW_CONFIG_PATH, OPENCLAW_HOME } from "@/lib/openclaw-paths";
+import { readOpenclawConfigObjectSync } from "@/lib/openclaw-config-read";
 import { enforceLocalRequest } from "@/lib/api-local-guard";
 
 type AgentRole = "main" | "sub";
@@ -30,7 +31,6 @@ const SUB_REQUIRED = [
   "ROLE.md",
 ];
 
-const OPENCLAW_CONFIG_PATH = path.join(OPENCLAW_HOME, "openclaw.json");
 const PRIMARY_AGENTS_ROOT = path.join(OPENCLAW_HOME, "agents");
 const WORKSPACE_AGENTS_ROOT = path.join(OPENCLAW_HOME, "workspace", "agents");
 const AUDIT_DIR = path.join(OPENCLAW_HOME, "audit");
@@ -120,15 +120,6 @@ function isSafeMdFile(file: string): boolean {
   return /^[a-zA-Z0-9._-]+\.md$/i.test(file);
 }
 
-function readJson(filePath: string): any {
-  try {
-    if (!fs.existsSync(filePath)) return null;
-    return JSON.parse(fs.readFileSync(filePath, "utf-8"));
-  } catch {
-    return null;
-  }
-}
-
 function listRootDirs(root: string): string[] {
   if (!fs.existsSync(root)) return [];
   return fs
@@ -170,7 +161,7 @@ function buildAgentDescriptors(): {
   detectedMainId?: string;
   source: AgentSource;
 } {
-  const cfg = readJson(OPENCLAW_CONFIG_PATH);
+  const cfg = readOpenclawConfigObjectSync(OPENCLAW_CONFIG_PATH) as Record<string, any>;
   const list = Array.isArray(cfg?.agents?.list) ? cfg.agents.list : [];
 
   if (list.length > 0) {

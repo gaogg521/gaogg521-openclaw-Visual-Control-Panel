@@ -28,6 +28,23 @@
 
 若飞书消息 **未写入该 `agentId` 目录下**的 session/jsonl（例如会话挂在别的 agent、或网关未落盘），活动接口仍无法显示在线——需检查 OpenClaw 的 session 归属与落盘路径。
 
+## 2026-04：按飞书群合并到「专家」Agent
+
+当 **所有 OC 群会话都落在总指挥（如 `main`）目录**、而 `agents.list` 里仍有各「专家」id 时，仅靠各专家自己的 `sessions/` 会一直显示 **下班**。
+
+**`/api/agent-activity`** 会：
+
+1. 汇总 **所有** 已配置 Agent 的会话目录中，`sessions.json` / 近期 `.jsonl` 里形如 `agent:*:feishu:group:<open_chat_id>` 的 **最后活跃时间**（按群 id 聚合）；
+2. 对每个专家，读取 **`openclaw.json` → `bindings`** 中该 `agentId` 且 `channel === "feishu"` 的条目，尝试解析 **群 open_chat_id**（如 `oc_…`，见 `lib/feishu-group-activity-boost.ts` 的多种字段兼容）；
+3. 将对应群的活跃时间 **合并进** 该专家的 `lastActive`，再算 `working / idle / offline`。
+
+若 bindings 里 **没有** 群 id（只有账号级绑定），可在 **`agents.list` 对应条** 上增加可选字段（与 OpenClaw 官方 schema 无关，仅本面板读取）：
+
+- `feishuOpenChatId` 或 `feishuGroupId`，或  
+- `identity.feishuOpenChatId` / `identity.feishuGroupId`  
+
+值为该专家负责的飞书群 **open_chat_id**（与 session key 中段一致）。
+
 ---
 
-*记录日期：2026-03（与代码注释一致时可随提交更新）*
+*记录日期：2026-03（与代码注释一致时可随提交更新）；2026-04 补充群合并逻辑说明*

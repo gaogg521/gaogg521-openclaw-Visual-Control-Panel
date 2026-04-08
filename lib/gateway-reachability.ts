@@ -1,4 +1,4 @@
-import { readJsonFileSync } from "@/lib/json";
+import { readOpenclawConfigObjectSync } from "@/lib/openclaw-config-read";
 import { OPENCLAW_CONFIG_PATH } from "@/lib/openclaw-paths";
 
 function readGatewayWebTarget(): { port: number; token: string; host: string } {
@@ -6,9 +6,9 @@ function readGatewayWebTarget(): { port: number; token: string; host: string } {
   let token = "";
   let host = "127.0.0.1";
   try {
-    const cfg = readJsonFileSync<{
+    const cfg = readOpenclawConfigObjectSync(OPENCLAW_CONFIG_PATH) as {
       gateway?: { port?: number; host?: string; auth?: { token?: string } };
-    }>(OPENCLAW_CONFIG_PATH);
+    };
     port = cfg.gateway?.port ?? 18789;
     token = cfg.gateway?.auth?.token ?? "";
     if (typeof cfg.gateway?.host === "string" && cfg.gateway.host.trim()) {

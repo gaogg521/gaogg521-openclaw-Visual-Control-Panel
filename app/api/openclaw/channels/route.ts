@@ -1,17 +1,11 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
 import { OPENCLAW_CONFIG_PATH } from "@/lib/openclaw-paths";
+import { readOpenclawConfigObjectSync } from "@/lib/openclaw-config-read";
 
 export type ChannelItem = { id: string; name: string; enabled: boolean; raw?: Record<string, unknown> };
 
 function loadConfig(): Record<string, any> {
-  try {
-    const raw = fs.readFileSync(OPENCLAW_CONFIG_PATH, "utf-8");
-    const data = JSON.parse(raw);
-    return typeof data === "object" && data !== null ? data : {};
-  } catch {
-    return {};
-  }
+  return readOpenclawConfigObjectSync(OPENCLAW_CONFIG_PATH) as Record<string, any>;
 }
 
 function normalizeChannels(cfg: Record<string, any>): ChannelItem[] {
